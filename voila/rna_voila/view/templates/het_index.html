@@ -46,12 +46,18 @@
                 .map(d => {
                     json_data[`lsv_filter[${d.name}]`] = d.value
                 });
+            $('.het-filters')
+                .serializeArray()
+                .map(d => {
+                    json_data[`het_filter[${d.name}]`] = d.value
+                });
         };
 
         const $results = $('#results').DataTable({
             processing: true,
             serverSide: true,
             autoWidth: false,
+            order: [[ 4, "desc" ]],
             lengthMenu: [[10, 25, 50, 100, 1000], [10, 25, 50, 100, 1000]],
             ajax: {
                 url: '{{ url_for("main.index_table") }}',
@@ -108,6 +114,18 @@
 
                         return copy_lsv_dd.outerHTML + ucsc_a.outerHTML
                     }
+                },{
+                    targets: 4,
+                    render: data => {
+
+                        return data;
+                    }
+                },{
+                    targets: 5,
+                    render: data => {
+
+                        return `${data} (${$('#stat_type option:selected').text()})`
+                    }
                 }
             ]
         });
@@ -119,6 +137,9 @@
                 $results.ajax.reload()
             }, 400);
         };
+
+        document.querySelector('.lsv-filters').onchange = reload_table;
+        document.querySelector('.het-filters').oninput = reload_table;
 
         function download(filename, text) {
             var element = document.createElement('a');
@@ -168,6 +189,83 @@
                 $(excl_incl).toggle();
             });
 
+        function outputUpdate(val) {
+            document.querySelector('#selected_stat_threshold').value = val;
+        }
+
+        $('#reindex-btn').click(function(){
+            let comparisons = [];
+            $('#het_grp_comp_tbl_load').css('display', 'flex');
+            $('#het_grp_comp_tbl .reindex-comp').each(function(i, v){
+                comparisons.push([
+                    v.getAttribute('data-comp1'),
+                    v.getAttribute('data-comp2'),
+                    v.checked
+                ]);
+            })
+
+            send_ajax('{{ url_for("main.reindex") }}', {'comparisons':comparisons})
+                .then(r => {
+                    $('#het_grp_comp_tbl_load').css('display', 'none');
+                    $results.ajax.reload();
+                });
+
+        })
+
+        // buttons for selecting all/none
+        $('#reindex-select-all').click(function(){
+            $('#het_grp_comp_tbl .reindex-comp').prop('checked', true);
+        })
+
+        $('#reindex-select-none').click(function(){
+            $('#het_grp_comp_tbl .reindex-comp').prop('checked', false);
+        })
+
+        // buttons for selecting all row/col
+        $('#het_grp_comp_tbl .het-grp-toggle').click(function(){
+            if(this.getAttribute('data-toggled') === '0'){
+                $(`#het_grp_comp_tbl input[data-comp1="${this.getAttribute('data-group-name')}"`).prop('checked', true);
+                $(`#het_grp_comp_tbl input[data-comp2="${this.getAttribute('data-group-name')}"`).prop('checked', true);
+                this.setAttribute('data-toggled', '1');
+            }else{
+                $(`#het_grp_comp_tbl input[data-comp1="${this.getAttribute('data-group-name')}"`).prop('checked', false);
+                $(`#het_grp_comp_tbl input[data-comp2="${this.getAttribute('data-group-name')}"`).prop('checked', false);
+                this.setAttribute('data-toggled', '0');
+            }
+        })
+
+        // hovering indicators for group rows
+        $('#het_grp_comp_tbl .het-grp-toggle').hover(function(){
+            $(`#het_grp_comp_tbl input[data-comp1="${this.getAttribute('data-group-name')}"`).parent().css('background-color', 'rgba(0,128,2,0.65)');
+            $(`#het_grp_comp_tbl input[data-comp2="${this.getAttribute('data-group-name')}"`).parent().css('background-color', 'rgba(0,128,2,0.65)');
+            //$(`#het_grp_comp_tbl thead th[data-group-name="${this.getAttribute('data-group-name')}"`).css('background-color', 'rgba(0,128,2,0.65)');
+        }, function(){
+            $(`#het_grp_comp_tbl input[data-comp1="${this.getAttribute('data-group-name')}"`).parent().css('background-color', '');
+            $(`#het_grp_comp_tbl input[data-comp2="${this.getAttribute('data-group-name')}"`).parent().css('background-color', '');
+            //$(`#het_grp_comp_tbl thead th[data-group-name="${this.getAttribute('data-group-name')}"`).css('background-color', '');
+        })
+
+        // calculate padding size needed
+        let max_len = 0;
+        $('#het_grp_comp_tbl tbody th span').each(function(i, v){
+            max_len = Math.max(max_len, v.offsetWidth);
+        })
+        $('#het_grp_comp_tbl').css('margin-top', `${(Math.sin(0.785398)*max_len)+2}px`);
+
+        // hover on upper/lower triangle highlights the opposite triangles value or checkbox
+        $('#het_grp_comp_tbl td').hover(function(){
+            $(`#het_grp_comp_tbl td[data-linkcomp="${this.getAttribute('data-linkcomp')}"`).css('background-color', '#460080a6');
+        }, function(){
+            $(`#het_grp_comp_tbl td[data-linkcomp="${this.getAttribute('data-linkcomp')}"`).css('background-color', '');
+        })
+
+        // click on upper/lower triangle shell also clicks corresponding box
+        $('#het_grp_comp_tbl td').click(function(){
+            $(`#het_grp_comp_tbl td[data-linkcomp="${this.getAttribute('data-linkcomp')}"`).find('input').click();
+        })
+
+
+
     </script>
 {% endblock %}
 
@@ -190,9 +288,38 @@
 
     <hr>
 
-    <form class="psi-filters pure-form pure-form-aligned">
+    <form class="het-filters pure-form pure-form-aligned">
         <fieldset>
             <div class="pure-g">
+                <div class="pure-u-1-4">
+                    {{ het_form.dpsi_threshold.label }}
+                    {{ het_form.dpsi_threshold }}
+                </div>
+
+                <div class="pure-u-1-4">
+                    {{ het_form.stat_threshold.label }}
+                    {{ het_form.stat_threshold(min=0.0, max=1.0, step=0.001, oninput="outputUpdate(value)") }}
+                    <output for="stat_threshold" id="selected_stat_threshold">{{ het_form.stat_threshold.data }}</output>
+                </div>
+
+                <div class="pure-u-1-4">
+                    {{ het_form.stat_type.label }}
+                    {{ het_form.stat_type }}
+                </div>
+
+
+
+            </div>
+        </fieldset>
+    </form>
+
+    <hr>
+
+    <div class="pure-form pure-form-aligned">
+        <fieldset>
+            <div class="pure-g">
+
+
                 <div class="pure-u-1-4">
                     <button type="submit" class="download-lsvs pure-button pure-button-primary">Download LSVs
                     </button>
@@ -202,10 +329,91 @@
                     <button type="submit" class="download-genes pure-button pure-button-primary">Download Genes
                     </button>
                 </div>
-
             </div>
         </fieldset>
-    </form>
+    </div>
+
+    <hr>
+{{ enable_het_comparison_chooser }}
+    {% if enable_het_comparison_chooser and (group_names|length > 2) %}
+        <div style="position: relative;">
+
+            <div id="het_grp_comp_tbl_load">Please wait...</div>
+            <table id="het_grp_comp_tbl" style="table-layout: fixed; width: 100%;">
+
+                <thead>
+                <tr>
+                    <th style="width:50%;text-align: right;padding-right: 2px">&nbsp;</th>
+                    {% for group_name in group_names %}
+                    <th scope="col" data-group-name="{{ group_name }}">{{ group_name }}</th>
+                    {% endfor %}
+                </tr>
+                </thead>
+                <tbody>
+                {% for group_name in group_names %}
+                <tr>
+                    <th scope="row"><span class="het-grp-toggle" data-group-name="{{ group_name }}" data-toggled="1">{{ group_name }}</span></th>
+                    {% set outer_loop = loop %}
+                    {% for c_group_name in group_names %}
+                    {% if group_name == c_group_name %}
+                        <td class="nopointer">
+                    {% elif loop.index > outer_loop.index %}
+                        <td data-linkcomp="{{ c_group_name }}+{{ group_name}}">
+                    {% else %}
+                        <td data-linkcomp="{{ group_name }}+{{ c_group_name}}">
+                    {% endif %}
+                        {% if group_name == c_group_name %}
+                            X
+                        {% elif loop.index > outer_loop.index %}
+                            {% if frozenset((group_name, c_group_name)) in session['group_map'] %}
+                                {{ session['group_map'][frozenset((group_name, c_group_name))][1] }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        {% else %}
+                            {% if frozenset((group_name, c_group_name)) in session['group_map'] %}
+                                <input data-comp1="{{ group_name }}" data-comp2="{{ c_group_name }}"
+                                        type="checkbox" class="reindex-comp"
+                                    {% if session['group_map'][frozenset((group_name, c_group_name))][2] %}
+                                        checked
+                                    {% endif %}
+                                >
+                            {% else %}
+                                -
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+
+                {% endfor %}
+                </tbody>
+            </table>
+
+        </div>
+        <div class="pure-form pure-form-aligned">
+            <fieldset>
+                <div class="pure-g">
+                    <div class="pure-u-1-4">
+                        <button type="button" id="reindex-btn" class="pure-button pure-button-primary">
+                            Apply Selected Comparisons
+                        </button>
+                    </div>
+
+                    <div class="pure-u-1-4">
+                        <button type="button" id="reindex-select-all" class="pure-button ">Select All
+                        </button>
+                    </div>
+
+                    <div class="pure-u-1-4">
+                        <button type="button" id="reindex-select-none" class="pure-button ">Select None
+                        </button>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+        <hr>
+    {% endif %}
 {% endblock %}
 
 {% block index_table %}
@@ -220,6 +428,8 @@
                     <th>LSV ID</th>
                     <th>LSV Type</th>
                     <th>Links</th>
+                    <th>max(dpsi)</th>
+                    <th>min(pval)</th>
                 </tr>
                 </thead>
                 <tbody>

@@ -75,7 +75,7 @@ cdef extern from "grimoire.hpp" namespace "grimoire":
                                   unsigned int denovo_thresh, unsigned int min_experiments, bint denovo) nogil ;
         void    fill_junc_tlb(map[string, vector[string]]& tlb) nogil ;
         int     get_constitutive_junctions(vector[string]& v) nogil ;
-        int     detect_lsvs(vector[LSV*] out_lsvlist, bint lsv_strict) nogil ;
+        int     detect_lsvs(vector[LSV*] out_lsvlist, bint lsv_strict, bint only_source, bint only_target) nogil ;
         void    simplify(map[string, int]& junc_tlb, np.float32_t simpl_percent, int strandness, int denovo_simpl,
                          int db_simple, int ir_simpl, bint last, unsigned int min_experiments) nogil ;
 

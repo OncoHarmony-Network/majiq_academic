@@ -14,7 +14,11 @@ voila/sandbox/*
 dist/*.egg
 majiq/rna_majiq.egg-info
 voila/rna_voila.egg-info
+rna_majiq_meta.egg-info
 */git_version
 *.so
 
+/doc/build
+/doc/source/generated
 
+.ipynb_checkpoints

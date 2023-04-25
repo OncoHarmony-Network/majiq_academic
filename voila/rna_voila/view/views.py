@@ -131,8 +131,7 @@ def get_app():
                 # the correct passcode is not in session either, deny access
                 return abort(403)
 
-
-    if not ViewConfig().ignore_inconsistent_group_errors:
+    if not ViewConfig().ignore_inconsistent_group_errors and not ViewConfig().splice_graph_only:
         m_all = ViewMatrix()
         warnings = m_all.check_group_consistency()
         @run_app.before_request
@@ -212,6 +211,9 @@ def ucsc_href(genome, chromosome, start, end):
 
 
 def lsv_boundries(lsv_exons):
+    if not lsv_exons:
+        print("Warning: Empty LSV?")
+        return -1, -1
     lsv_exons = list(e if e[1] != -1 else (e[0], e[0] + 10) for e in lsv_exons)
     lsv_exons = list(e if e[0] != -1 else (e[1] - 10, e[1]) for e in lsv_exons)
     start = max(e for es in lsv_exons for e in es if e != -1)

@@ -88,6 +88,32 @@ class DataTables:
     def filter_values(self, filter_name):
         return {k.split('[')[1][:-1]: v for k, v in self._form.items() if k.startswith(filter_name)}
 
+    def heterogen_filters(self):
+        het_filters = self.filter_values('het_filter')
+
+        dpsi_thresh = het_filters['dpsi_threshold']
+        stat_thresh = het_filters['stat_threshold']
+        stat_type_i = int(het_filters['stat_type'])
+
+        try:
+            dpsi_thresh = float(dpsi_thresh)
+        except ValueError:
+            dpsi_thresh = 0
+
+        try:
+            stat_thresh = float(stat_thresh)
+        except ValueError:
+            stat_thresh = 0
+
+        #
+        # for rs in self._records:
+        #     print(stat_thresh, json.loads(rs['stat_threshold']))
+
+        self.extra_filter(lambda rs: json.loads(rs['dpsi_threshold']) >= dpsi_thresh)
+        self.extra_filter(lambda rs: json.loads(rs['stat_threshold'])[stat_type_i] <= stat_thresh)
+
+        return stat_type_i
+
     def delta_psi_filters(self):
         dpsi_filter_values = self.filter_values('dpsi_filter')
 

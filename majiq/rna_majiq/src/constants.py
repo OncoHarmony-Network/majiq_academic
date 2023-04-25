@@ -5,6 +5,7 @@ Constants used by MAJIQ
 """
 
 import os
+import tempfile
 import string as pystring  # just importing it as string causes cython errors
 from importlib.metadata import version, PackageNotFoundError
 
@@ -14,7 +15,7 @@ except PackageNotFoundError:
     try:
         VERSION = version("rna_majiq")
     except PackageNotFoundError:
-        VERSION = "2.2.0"
+        VERSION = "2.3.0"
 
 # file extensions
 JUNC_FILE_FORMAT = "sj"
@@ -49,6 +50,12 @@ try:
 except ModuleNotFoundError:  # when importing in setup, don't need numpy yet
     EPSILON = 2e-16  # slightly less than float64 epsilon
 
+run_tempdir = None
+def get_tmp_dir(outdir):
+    global run_tempdir
+    if not run_tempdir:
+        run_tempdir = tempfile.mkdtemp(dir=outdir)
+    return run_tempdir
 
 def get_quantifier_voila_filename(outdir, name, deltapsi=False, het=False):
     if deltapsi:
@@ -63,7 +70,7 @@ def get_prior_matrix_filename(outdir, names):
 
 
 def get_build_temp_db_filename(outdir):
-    return "%s/db.tb" % outdir
+    return os.path.join(get_tmp_dir(outdir), "db.tb")
 
 
 def get_builder_majiq_filename(outdir, name):
@@ -79,4 +86,4 @@ def get_weights_filename(outdir, name):
 
 
 def get_tmp_psisample_file(outdir, name):
-    return "%s/%s.psisamples.tmp" % (outdir, name)
+    return os.path.join(get_tmp_dir(outdir), f"{name}.psisamples.tmp")

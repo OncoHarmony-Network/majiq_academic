@@ -48,10 +48,13 @@ def nav(gene_id):
         gene_ids = sorted(sg.gene_ids)
         idx = bisect(gene_ids, gene_id)
 
-        return jsonify({
-            'next': url_for('main.gene', gene_id=gene_ids[idx % len(gene_ids)]),
-            'prev': url_for('main.gene', gene_id=gene_ids[(idx % len(gene_ids)) - 2])
-        })
+        try:
+            return jsonify({
+                'next': url_for('main.gene', gene_id=gene_ids[idx % len(gene_ids)]),
+                'prev': url_for('main.gene', gene_id=gene_ids[(idx % len(gene_ids)) - 2])
+            })
+        except:
+            return jsonify({'next': '#', 'prev': '#'})
 
 
 @bp.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))

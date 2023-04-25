@@ -176,6 +176,18 @@ class Genes(SpliceGraphSQL):
         query = self.conn.execute('SELECT id, name, strand, chromosome FROM gene')
         return self._iter_results(query, gene_fieldnames)
 
+    def gene_extent(self, gene_id):
+        """
+        Get start and end of gene based on first and last annotated exon coordinates
+        """
+
+        min_query = self.conn.execute('SELECT MIN (annotated_start) FROM exon WHERE gene_id=? AND annotated=TRUE AND annotated_start != -1 AND annotated_end != -1', (gene_id,))
+        max_query = self.conn.execute('SELECT MAX (annotated_end) FROM exon WHERE gene_id=? AND annotated=TRUE AND annotated_start != -1 AND annotated_end != -1', (gene_id,))
+
+        res_min = min_query.fetchall()
+        res_max = max_query.fetchall()
+        return res_min[0][0], res_max[0][0]
+
     def gene(self, gene_id):
         """
         Get gene with gene id supplied.
@@ -236,22 +248,25 @@ class Junctions(SpliceGraphSQL):
                                     ''' + (" AND is_simplified = 0" if omit_simplified else ''), (gene_id,))
         return self._iter_results(query, junc_fieldnames)
 
-    def junction_reads_exp(self, junction, experiment_names):
+    def junction_reads_exp(self, junction, experiment_names=None):
         """
         for a junction and a set of experiment names, get a list of reads.
         :param junction: junction dictionary
         :param experiment_names: list of experiment names
         :return: list of reads dictionaries
         """
-
-        query = self.conn.execute('''
-                                SELECT reads, experiment_name 
-                                FROM junction_reads
-                                WHERE junction_start=?
-                                AND junction_end=?
-                                AND junction_gene_id=?
-                                AND experiment_name IN ({})
-                                '''.format(','.join(["'{}'".format(x) for x in experiment_names])),
+        q_s = '''
+            SELECT reads, experiment_name 
+            FROM junction_reads
+            WHERE junction_start=?
+            AND junction_end=?
+            AND junction_gene_id=? 
+            '''
+        if experiment_names:
+            q_s += '''
+            AND experiment_name IN ({})
+            '''.format(','.join(["'{}'".format(x) for x in experiment_names]))
+        query = self.conn.execute(q_s,
                                   itemgetter('start', 'end', 'gene_id')(junction))
 
         return self._iter_results(query, junc_reads_fieldnames)
@@ -287,15 +302,19 @@ class IntronRetentions(SpliceGraphSQL):
         :return: list of intron retention reads
         """
 
-        query = self.conn.execute('''
-                                SELECT reads, experiment_name 
-                                FROM intron_retention_reads
-                                WHERE intron_retention_start=?
-                                AND intron_retention_end=?
-                                AND intron_retention_gene_id=?
-                                AND experiment_name IN ({})
-                                '''.format(','.join(["'{}'".format(x) for x in experiment_names])),
-                                  (ir['start'], ir['end'], ir['gene_id']))
+        q_s = '''
+            SELECT reads, experiment_name 
+            FROM intron_retention_reads
+            WHERE intron_retention_start=?
+            AND intron_retention_end=?
+            AND intron_retention_gene_id=?
+                                '''
+        if experiment_names:
+            q_s += '''
+            AND experiment_name IN ({})
+            '''.format(','.join(["'{}'".format(x) for x in experiment_names]))
+        query = self.conn.execute(q_s, itemgetter('start', 'end', 'gene_id')(ir))
+
         return self._iter_results(query, ir_reads_fieldnames)
 
 

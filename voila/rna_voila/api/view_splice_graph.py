@@ -307,7 +307,7 @@ class ViewSpliceGraph(SpliceGraph):
                 if intron_res:
                     yield intron_res[0]
 
-    def lsv_reads(self, gene_id, lsv_junctions, experiment_names, has_ir):
+    def lsv_reads(self, gene_id, lsv_junctions, experiment_names, has_ir, dbg=False):
         """
         List of junction which are annotated in the db.
         :param gene_id: gene id
@@ -333,7 +333,7 @@ class ViewSpliceGraph(SpliceGraph):
                                 AND junction_start=? 
                                 AND junction_end=?
                                 AND experiment_name in ({','.join(['?']*len(found_in_exps))})
-                                ''', (gene_id, junc[0], junc[1], *found_in_exps))
+                                ''', (gene_id, str(junc[0]), str(junc[1]), *found_in_exps))
             junc_res = junc_query.fetchall()
             for junc in junc_res:
                 reads, exp = junc
@@ -350,10 +350,12 @@ class ViewSpliceGraph(SpliceGraph):
                                             AND intron_retention_start=? 
                                             AND intron_retention_end=?
                                             AND experiment_name in ({','.join(['?']*len(found_in_exps))})
-                                            ''', (gene_id, ir_junction[0], ir_junction[1], *found_in_exps))
+                                            ''', (gene_id, str(ir_junction[0]), str(ir_junction[1]), *found_in_exps))
+
             intron_res = intron_query.fetchall()
             for intron in intron_res:
                 reads, exp = intron
+
                 found_in_exps.remove(exp)
                 exps[exp][1].append(reads)
             for exp in found_in_exps:

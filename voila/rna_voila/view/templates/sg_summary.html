@@ -22,7 +22,7 @@
                 remove_img: '{{ url_for('static', filename='img/remove.svg')}}',
                 remove_fn: event => {
                     const sg = event.target.closest('.splice-graph');
-                    send_ajax('{{ url_for('psi_splice_graphs') }}', {'remove': [sg.dataset.group, sg.dataset.experiment]})
+                    send_ajax('{{ url_for('main.psi_splice_graphs') }}', {'remove': [sg.dataset.group, sg.dataset.experiment]})
                         .then(() => {
                             sg.remove();
                             SpliceGraphTools._populate_sg_form();

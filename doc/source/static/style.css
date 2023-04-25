@@ -1,0 +1,15 @@
+.wy-side-nav-search{
+    box-shadow:
+            0 0 0 3px #f56f6b,
+            0 0 0 6px #f69469,
+            0 0 0 9px #fde669,
+            0 0 0 12px #70bc82,
+            0 0 0 15px #7184bd,
+            0 0 0 18px #6c5092;
+    margin-bottom: 21px;
+}
+
+.logo{
+    background-color: #fff5 !important;
+    border-radius: 4px !important;
+}

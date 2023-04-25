@@ -542,6 +542,8 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
     cdef int m = conf.m
     cdef bint ir = conf.ir
     cdef bint lsv_strict = conf.lsv_strict
+    cdef bint only_source = conf.only_source_lsvs
+    cdef bint only_target = conf.only_target_lsvs
     cdef int nlsv
     cdef map[string, Gene*] gene_map
     cdef map[string, overGene_vect_t] gene_list
@@ -594,7 +596,7 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
         gene_to_splicegraph(gg, db)
         with gil:
             logger.debug("[%s] Detect LSVs" % gg.get_id())
-        nlsv = gg.detect_lsvs(out_lsvlist, lsv_strict)
+        nlsv = gg.detect_lsvs(out_lsvlist, lsv_strict, only_source, only_target)
 
     if cjuncs.size()>0 and dumpCJunctions:
         with open("%s/constitutive_junctions.tsv" % conf.outDir, 'w+') as fp:
@@ -649,9 +651,14 @@ class Builder(BasicPipeline):
 
     def builder(self, majiq_config):
 
-        logger = majiq_logger.get_logger("%s/majiq.log" % majiq_config.outDir, silent=self.silent, debug=self.debug)
+        logFile = majiq_config.logger if majiq_config.logger else f"{majiq_config.outDir}/majiq.log"
+        logger = majiq_logger.get_logger(logFile, silent=self.silent, debug=self.debug)
         logger.info(f"Majiq Build v{constants.VERSION}")
         logger.info("Command: %s" % " ".join(sys.argv))
+
+        if sum((not majiq_config.lsv_strict, majiq_config.only_target_lsvs, majiq_config.only_source_lsvs,)) > 1:
+            logger.critical("You may only specify one of --permissive-lsvs, --target-lsvs, --source-lsvs")
+            sys.exit(1)
 
         _core_build(self.transcripts, majiq_config.sam_list, majiq_config, logger)
 

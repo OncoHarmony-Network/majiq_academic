@@ -42,6 +42,7 @@
 
 
 {% block analysis_type_script %}
+
     <script src="{{ url_for('static', filename='js/lib/jquery.sumoselect.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/lib/jquery.ba-throttle-debounce.min.js') }}"></script>
     <script>
@@ -392,6 +393,9 @@
                 $(violin).toggle();
                 $(compact).toggle();
             })
+
+
+
 
     </script>
 {% endblock %}

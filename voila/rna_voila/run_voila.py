@@ -79,7 +79,8 @@ tsv_parser.add_argument('files', nargs='+', type=check_file,
 
 required_tsv_parser.add_argument('-f', '--file-name', required=True, help="Output TSV file's name and location.")
 
-tsv_parser.add_argument('--show-read-counts', action='store_true', help=argparse.SUPPRESS)
+tsv_parser.add_argument('--show-read-counts', action='store_true',
+                        help="Show the read counts per experiment in the TSV output")
 tsv_parser.add_argument('--ignore-inconsistent-group-errors', action='store_true',
                         help="Don't show any warnings / errors when multiple experiments with the same name, "
                              "but different experiments are analyzed")
@@ -127,6 +128,7 @@ dpsi_het_thresholds_parser.add_argument('--non-changing-between-group-dpsi', typ
                                              ' The default is "%(default)s"')
 
 
+
 dpsi_thresholds_parser = tsv_parser.add_argument_group("Thresholds for Deltapsi inputs")
 dpsi_thresholds_parser.add_argument('--threshold', type=float, default=0.2,
                         help='Filter out LSVs with no junctions predicted to change over a certain value. Even when '
@@ -157,6 +159,7 @@ view_parser.add_argument('--ignore-inconsistent-group-errors', action='store_tru
                          help="Don't show any warnings / errors when multiple experiments with the same name, "
                               "but different experiments are analyzed")
 view_parser.add_argument('--splice-graph-only', action='store_true', help=argparse.SUPPRESS)
+view_parser.add_argument('--enable-het-comparison-chooser', action='store_true', help=argparse.SUPPRESS)
 
 webserver_parser = view_parser.add_argument_group("Web Server hosting and security options")
 webserver_parser.add_argument('-p', '--port', type=int, default=0,
@@ -211,6 +214,14 @@ classify_parser.add_argument('--show-all', action='store_true',
 classify_parser.add_argument('--heatmap-selection', choices=['shortest_junction', 'max_abs_dpsi'],
                              help='For the classifier output "heatmap", the quantification values may be derived from either the shortest junction in the module (default), '
                                   'or optionally, if a het or dpsi file is provided, from the junction with the maximum dpsi value')
+classify_parser.add_argument('--disable-metadata', action='store_true',
+                             help="By default, there will be a commented-out JSON metadata for the run at the top of all output TSV files. "
+                                  "If your pipeline doesn't work well with this format, this switch disables it.")
+classify_parser.add_argument('--show-read-counts', action='store_true',
+                             help="Show the read counts per experiment in the TSV output")
+classify_parser.add_argument('--cassettes-constitutive-column', action='store_true', help=argparse.SUPPRESS)
+classify_parser.add_argument('--junc-gene-dist-column', action='store_true', help=argparse.SUPPRESS)
+
 
 classify_general_filter_parser = classify_parser.add_argument_group(
     "Limit the number of data processed to a specific target subset"
@@ -221,6 +232,8 @@ classify_general_filter_parser.add_argument('--gene-ids', nargs='*', default=[],
 classify_general_filter_parser.add_argument('--debug-num-genes', type=int,
                              help='Modulize only n many genes, useful to see an excerpt of the functionality without '
                                   'waiting for a full run to complete.')
+classify_general_filter_parser.add_argument('--include-change-cases', action='store_true',
+                                             help=argparse.SUPPRESS)
 
 classify_secondary_modes_parser = classify_parser.add_argument_group(
     "Alternative use cases / run modes for specialized applications of modulizer"
@@ -239,15 +252,18 @@ classify_structure_filter_parser = classify_parser.add_argument_group(
 )
 
 classify_structure_filter_parser.add_argument('--keep-constitutive', type=int, nargs='?', const=1,
-                         help='Do not discard modules with only one junction, implies "--show-all-modules". Turns on '
-                              'output of constitutive.tsv and constitutive column in summary output')
+                         help='Do not discard modules with only one junction. Turns on '
+                              'output of constitutive.tsv and constitutive column in summary output, kept junctions '
+                              'are further filtered based on reads, minimum of which can be specified in the argument. '
+                              '(default one read)')
 classify_structure_filter_parser.add_argument('--keep-no-lsvs-modules', action='store_true',
                          help='Do not discard modules that are unquantified my Majiq (no LSVs found)')
 classify_structure_filter_parser.add_argument('--keep-no-lsvs-junctions', action='store_true',
                          help='If there are no LSVs attached to a specific junction, retain the junction instead of removing it')
 
 decomplexifier_filter_parser = classify_parser.add_argument_group(
-    "Options for 'decomplexifier': removing junctions based on simple criteria prior to creating modules"
+    "Options for 'decomplexifier': removing junctions based on simple criteria prior to creating modules. "
+    "These criteria are each applied independently. "
 )
 decomplexifier_filter_parser.add_argument('--decomplexify-psi-threshold', type=float, default=0.05,
                          help='Filter out junctions where PSI is below a certain value (between 0.0 and 1.0). If multiple '
@@ -280,7 +296,15 @@ dpsi_het_modulize_filter_parser.add_argument('--changing-between-group-dpsi-seco
                                               ' meet the other changing definitions, and ALL junctions in an event must meet this condition (DPSI value'
                                               ' of the junction >= this value). Applies to HET or delta-PSI inputs'
                                               ' The default is "%(default)s".')
-
+dpsi_het_modulize_filter_parser.add_argument('--non-changing-median-reads-threshold', type=int, default=0,
+                                        help='(beta), for all non changing events in the output, after all other thresholds, '
+                                             'apply a filter based on median-reads. If this flag is set and the median reads '
+                                             'are less than the specified value, do not mark that event as non-changing.')
+dpsi_het_modulize_filter_parser.add_argument('--permissive-event-non-changing-threshold', type=float, default=1.0,
+                                             help='Add a new criterion for non-changing: mark events non_changing as long as 1) '
+                                                  'none of the cases are changing 2) as least X percent of the cases are non-changing '
+                                                  '(per junction). Will also enable an additional output column event_non_changing_cases '
+                                                  'which gives the total count of comparisons which were marked non-changing (summed over junctions in event). ')
 
 het_modulize_filter_parser = classify_parser.add_argument_group(
     "Adjust the parameters used for determining whether a junction / module is changing or non-changing based on "

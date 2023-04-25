@@ -91,6 +91,8 @@ class Graph:
             if not gene_meta:
                 raise VoilaException("Gene ID not found in SpliceGraph File: %s" % self.gene_id)
             self.strand, self.gene_name, self.chromosome = itemgetter('strand', 'name', 'chromosome')(gene_meta)
+            if self.config.junc_gene_dist_column:
+                self.gene_start, self.gene_end = sg.gene_extent(self.gene_id)
 
         self.priors = {}
 
@@ -1208,6 +1210,16 @@ class Graph:
                                 if len(edge.lsvs) > 0:
                                     self.classified_lsvs.extend(edge.lsvs)
                                 self.classified_junctions.extend([include1, include2, edge])
+
+                            event_constitutive = []
+                            if self.graph.config.cassettes_constitutive_column:
+                                indices = [self.nodes.index(x) for x in (n1, n2, n3)]
+                                if list(range(min(indices), max(indices)+1)) == sorted(indices) or \
+                                   list(reversed(range(min(indices), max(indices)+1))) == sorted(indices, reverse=True):
+                                    event_constitutive = [True]
+                                else:
+                                    event_constitutive = [False]
+
                             found.append({'event': 'cassette_exon',
                                           'C1': self.strand_case(n1, n3),
                                           'C2': self.strand_case(n3, n1),
@@ -1215,7 +1227,8 @@ class Graph:
                                           'Include1': self.strand_case(include1, include2),
                                           'Include2': self.strand_case(include2, include1),
                                           'Skip': skip,
-                                          'event_id': 'CE_%s' % i})
+                                          'event_id': 'CE_%s' % i,
+                                          'constitutive': event_constitutive})
                             i += 1
 
             return found
@@ -1227,7 +1240,7 @@ class Graph:
             """
 
             found = []
-            k = 0
+            event_index = 0
 
             if len(self.nodes) < 4:
                 return []
@@ -1287,8 +1300,8 @@ class Graph:
                                                       'Include2': include2,
                                                       'Tandem_Exons': self.nodes[i + 1:j],
                                                       'Includes': includes,
-                                                      'event_id':'TCE_%s' % k})
-                                        k += 1
+                                                      'event_id':'TCE_%s' % event_index})
+                                        event_index += 1
             return found
 
         def multi_exon_spanning(self):
@@ -1317,12 +1330,20 @@ class Graph:
                     if j - i > 2:
                         skip = n1.connects(n2)
                         if skip:
-                            include1s = n1.connects(self.nodes[i + 1], ir=True)
-                            if len(include1s) == 0:
-                                include1s.append(None)
-                            include2s = self.nodes[j - 1].connects(n2, ir=True)
-                            if len(include2s) == 0:
-                                include2s.append(None)
+
+                            for possible_i in range(i+1, j):
+                                include1s = n1.connects(self.nodes[possible_i], ir=True)
+                                if len(include1s) > 0:
+                                    break
+                            else:
+                                include1s = (None,)
+
+                            for possible_i in range(j-1, i, -1):
+                                include2s = self.nodes[possible_i].connects(n2, ir=True)
+                                if len(include2s) > 0:
+                                    break
+                            else:
+                                include2s = (None,)
                             for sk in skip:
                                 for include1 in include1s:
                                     for include2 in include2s:
@@ -1690,11 +1711,16 @@ class Graph:
                             if other_exon == node:
                                 continue
                             shared_lsv = set(junc_from_he.lsvs) & set(junc_to_another_exon.lsvs)
-                            # NOTE: we only classify p_ale if this is a source LSV right now.
-                            # skip classifying if LSV is target !
-                            this_lsv = shared_lsv.pop()
-                            if not ":s:" in this_lsv:
-                                continue
+                            # only classify if LSV exists
+                            # this set is empty for example if a p_ale/p_afe 
+                            # has the two required junctions but there were not 
+                            # enough reads for the quantifier to see an LSV.
+                            if len(shared_lsv) > 0:
+                                this_lsv = shared_lsv.pop()
+                                if not ":s:" in this_lsv:
+                                    continue
+                                if len(shared_lsv) == 1:
+                                    self.classified_lsvs.append(this_lsv)
 
 
                             if len(junc_from_he) > len(junc_to_another_exon):
@@ -1707,8 +1733,6 @@ class Graph:
                                 distal = other_exon
                                 skipA1 = junc_to_another_exon
                                 skipA2 = junc_from_he
-                            if len(shared_lsv) == 1:
-                                self.classified_lsvs.append(this_lsv)
                             found.append({'event': 'p_ale', 'Proximal': proximal,
                                           'Distal': distal, 'Reference': ref_exon,
                                           'SkipA2': skipA2,
@@ -1758,10 +1782,16 @@ class Graph:
                                 continue
 
                             shared_lsv = set(junc_from_he.lsvs) & set(junc_to_another_exon.lsvs)
-
-                            this_lsv = shared_lsv.pop()
-                            if not ":t:" in this_lsv:
-                                continue
+                            # only classify if LSV exists
+                            # this set is empty for example if a p_ale/p_afe 
+                            # has the two required junctions but there were not 
+                            # enough reads for the quantifier to see an LSV.
+                            if len(shared_lsv) > 0:
+                                this_lsv = shared_lsv.pop()
+                                if not ":t:" in this_lsv:
+                                    continue
+                                if len(shared_lsv) == 1:
+                                    self.classified_lsvs.append(this_lsv)
 
                             if len(junc_from_he) > len(junc_to_another_exon):
                                 proximal = other_exon
@@ -1773,8 +1803,7 @@ class Graph:
                                 distal = other_exon
                                 skipA1 = junc_from_he
                                 skipA2 = junc_to_another_exon
-                            if len(shared_lsv) == 1:
-                                self.classified_lsvs.append(this_lsv)
+                            
                             found.append({'event': 'p_afe', 'Proximal': proximal,
                                           'Distal': distal, 'Reference': ref_exon,
                                           'SkipA2': skipA2,
@@ -1811,26 +1840,42 @@ class Graph:
                             if other_node.start > node.start:
                                 break
                 else:
-                    if self.graph.strand == '+':
-                        a1 = self.nodes[0]
-                        c1 = self.nodes[-1]
-                    else:
-                        a1 = self.nodes[-1]
-                        c1 = self.nodes[0]
 
-                    skipA1s = node.connects(c1, ir=True) + c1.connects(node, ir=True)
-                    skipA2s = a1.connects(c1, ir=True) + c1.connects(a1, ir=True)
-                    for skipA1 in skipA1s:
-                        for skipA2 in skipA2s:
-                            shared_lsv = set(skipA1.lsvs) & set(skipA2.lsvs)
+                    # first get the junction(s) connecting from the afe backwards
+                    for junc_from_afe in self.strand_case(node.edges, node.back_edges):
+
+
+
+                        ref_exon = self.strand_case(self.graph.end_node(junc_from_afe), self.graph.start_node(junc_from_afe))
+
+                        # then, look for junctions coming out of the found 'reference' exon pointed in the same
+                        # direction as the afe
+                        for junc_to_another_exon in self.strand_case(ref_exon.back_edges, ref_exon.edges):
+                            other_exon = self.strand_case(self.graph.start_node(junc_to_another_exon),
+                                                          self.graph.end_node(junc_to_another_exon))
+                            if other_exon == node:
+                                continue
+
+                            if len(junc_from_afe) > len(junc_to_another_exon):
+                                proximal = other_exon
+                                distal = node
+                                skipA1 = junc_to_another_exon
+                                skipA2 = junc_from_afe
+                            else:
+                                proximal = node
+                                distal = other_exon
+                                skipA1 = junc_from_afe
+                                skipA2 = junc_to_another_exon
+
+                            shared_lsv = set(junc_from_afe.lsvs) & set(junc_to_another_exon.lsvs)
                             if len(shared_lsv) == 1:
                                 self.classified_lsvs.append(shared_lsv.pop())
-                            found.append({'event': 'afe', 'Proximal': node,
-                                  'Distal': a1, 'Reference': c1,
+                            found.append({'event': 'afe', 'Proximal': proximal,
+                                  'Distal': distal, 'Reference': ref_exon,
                                   'SkipA2': skipA2,
                                   'SkipA1': skipA1})
-                            self.classified_junctions.extend(skipA1s)
-                            self.classified_junctions.extend(skipA2s)
+                            self.classified_junctions.append(skipA2)
+                            self.classified_junctions.append(skipA1)
 
             return found
 
@@ -1857,27 +1902,42 @@ class Graph:
                             if other_node.start < node.start:
                                 break
                 else:
-                    if self.graph.strand == '+':
-                        a2 = self.nodes[-1]
-                        c1 = self.nodes[0]
-                    else:
-                        a2 = self.nodes[0]
-                        c1 = self.nodes[-1]
 
-                    skipA1s = a2.connects(c1, ir=True) + c1.connects(a2, ir=True)
-                    skipA2s = c1.connects(node, ir=True) + node.connects(c1, ir=True)
-                    # update seen junctions in Module
-                    for skipA1 in skipA1s:
-                        for skipA2 in skipA2s:
-                            shared_lsv = set(skipA1.lsvs) & set(skipA2.lsvs)
+
+                    # first get the junction(s) connecting from the half_exon backwards
+                    for junc_from_ale in self.strand_case(node.back_edges, node.edges):
+
+                        ref_exon = self.strand_case(self.graph.start_node(junc_from_ale), self.graph.end_node(junc_from_ale))
+
+                        # then, look for junctions coming out of the found 'reference' exon pointed in the same
+                        # direction as the half-exon
+                        for junc_to_another_exon in self.strand_case(ref_exon.edges, ref_exon.back_edges):
+                            other_exon = self.strand_case(self.graph.end_node(junc_to_another_exon),
+                                                          self.graph.start_node(junc_to_another_exon))
+                            if other_exon == node:
+                                continue
+
+
+                            if len(junc_from_ale) > len(junc_to_another_exon):
+                                proximal = other_exon
+                                distal = node
+                                skipA1 = junc_from_ale
+                                skipA2 = junc_to_another_exon
+                            else:
+                                proximal = node
+                                distal = other_exon
+                                skipA1 = junc_to_another_exon
+                                skipA2 = junc_from_ale
+
+                            shared_lsv = set(junc_from_ale.lsvs) & set(junc_to_another_exon.lsvs)
                             if len(shared_lsv) == 1:
                                 self.classified_lsvs.append(shared_lsv.pop())
-                            found.append({'event': 'ale', 'Proximal': node,
-                                  'Distal': a2, 'Reference': c1,
+                            found.append({'event': 'ale', 'Proximal': proximal,
+                                  'Distal': distal, 'Reference': ref_exon,
                                   'SkipA2': skipA2,
                                   'SkipA1': skipA1})
-                            self.classified_junctions.extend(skipA1s)
-                            self.classified_junctions.extend(skipA2s)
+                            self.classified_junctions.append(skipA1)
+                            self.classified_junctions.append(skipA2)
 
             return found
 

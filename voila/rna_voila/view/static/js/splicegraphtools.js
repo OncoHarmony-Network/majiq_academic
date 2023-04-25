@@ -2,6 +2,8 @@ class SpliceGraphTools {
     constructor(sgs, gene, highlight_lsvs) {
         this.grp_names = gene.group_names;
         this.exp_names = gene.experiment_names;
+        // for use with natural sorting
+        this.collator = new Intl.Collator(undefined, {numeric: true, sensitivity: 'base'});
         this.sgs = sgs;
         this.highlight_lsvs = highlight_lsvs;
         this._init();
@@ -11,40 +13,41 @@ class SpliceGraphTools {
     _init() {
         const gene = this.sgs.gene;
 
-
-        function toggle_splicegraph_opts(){
-            d3.selectAll('.lsv-tools.tools-menu')
+        // when clicked, will toggle all of the other active menus / buttons off and enable only ours
+        function hide_others(){
+            d3.selectAll('.tools-menu')
                 .classed('hide-tools-menu', true);
-            document.querySelector('.splice-graph-tools.tools-menu').classList.toggle('hide-tools-menu');
-            $('#splice-graph-menu-btn').toggleClass('pure-menu-active')
+            d3.selectAll('.tools-menu-btn')
+                .classed('pure-menu-active', false);
         }
 
-        // menu drop downs
-        document.querySelector('.splice-graph-tools.tools-menu-btn').onclick = (event) => {
+        function show_ours(){
+            document.getElementById('splice-graph-tools-box').classList.remove('hide-tools-menu');
+            $('#splice-graph-menu-btn').addClass('pure-menu-active')
+        }
+
+        // enable this menu when the button is clicked
+        document.querySelector('#splice-graph-menu-btn').onclick = (event) => {
             event.preventDefault();
             event.stopPropagation();
-            toggle_splicegraph_opts();
+            const already_active = $('#splice-graph-menu-btn').hasClass('pure-menu-active');
+            hide_others();
+            if(!already_active){
+                show_ours();
+            }
         };
 
-        // handling click outside of splice graph options hides the options
+        // handling click outside of our options hides them
         $("body").click(function(event){
-           if($('#splice-graph-menu-btn').hasClass('pure-menu-active')){
-                toggle_splicegraph_opts();
-           }
+            if($('#splice-graph-menu-btn').hasClass('pure-menu-active')){
+                hide_others();
+            }
         });
 
         // (and click inside the options does not hide it)
-        $(".splice-graph-tools").click(function (event) {
-           event.stopPropagation();
+        $("#splice-graph-tools-box").click(function (event) {
+            event.stopPropagation();
         });
-
-        document.querySelectorAll('.lsv-tools.tools-menu-btn')
-            .forEach(l => l.onclick = (event) => {
-                event.preventDefault();
-                d3.selectAll('.splice-graph-tools.tools-menu')
-                    .classed('hide-tools-menu', true);
-                document.querySelector('.lsv-tools.tools-menu').classList.toggle('hide-tools-menu');
-            });
 
 
         if($('.splice-graph-container .splice-graph').length === 0){
@@ -73,7 +76,7 @@ class SpliceGraphTools {
                 .map(sg => sg.dataset.experiment);
 
             const exps = this.exp_names[event.target.selectedIndex]
-                .filter(e => !shown_exps.includes(e));
+                .filter(e => !shown_exps.includes(e)).sort(this.collator.compare);
 
             const s = d3.select('.experiments select')
                 .selectAll('option')

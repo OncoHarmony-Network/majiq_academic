@@ -5,11 +5,11 @@
 # setup
 setuptools >= 45
 wheel
-Cython == 0.29.14
+Cython == 0.29.32
 setuptools_scm >= 6.2
 
 # setup and installation
-numpy >= 1.18.1
+numpy >= 1.21
 
 # installation
 scipy >= 1.4.1

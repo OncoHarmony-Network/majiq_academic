@@ -1,3 +1,4 @@
+import statistics
 from rna_voila.config import ClassifyConfig
 import numpy as np
 from rna_voila.vlsv import get_expected_psi, matrix_area
@@ -10,9 +11,17 @@ from rna_voila.exceptions import GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoila
 from rna_voila.api.matrix_utils import generate_variances
 from rna_voila.api import view_matrix
 from collections import OrderedDict
+from rna_voila.api import SpliceGraph
+from statistics import median, StatisticsError
+from math import ceil
 
-SIG_FIGS = 3
-
+def fRound(x):
+    try:
+        x = iter(x)
+        ret = ';'.join(f'{_x:0.3e}' for _x in x)
+    except TypeError as te:
+        ret = f'{x:0.3e}'
+    return ret
 
 class QuantificationWriter:
 
@@ -47,6 +56,16 @@ class QuantificationWriter:
         for field in self.quantifications_int:
 
             quantification_vals = []
+            if not lsvs and self.config.show_read_counts:
+                try:
+                    quants = self.quantifications_int[field][0](*self.quantifications_int[field][1:])(None, edge)
+                    if quants is None:
+                        quantification_vals.append('')
+                    else:
+                        for val in quants:
+                            quantification_vals.append(val)
+                except:
+                    quantification_vals.append('')
             for lsv_id in lsvs:
                  #print(self.quantifications_int[field](lsv_id, edge))
 
@@ -126,6 +145,7 @@ class QuantificationWriter:
                     pass
             except:
                 pass
+        return slice(None)
 
     def quantification_intersection(self):
         """
@@ -163,11 +183,11 @@ class QuantificationWriter:
                     else:
                         vals.append(all_quants[edge_idx])
 
-                return (round(x, SIG_FIGS) for x in vals) if _round else vals
+                return (fRound(x) for x in vals) if _round else vals
             else:
                 if self.avg_multival and all_quants:
                     return np.mean(all_quants)
-                return (round(x, SIG_FIGS) for x in all_quants) if _round else all_quants
+                return (fRound(x) for x in all_quants) if _round else all_quants
 
         def _psi_psi(voila_files):
             def f(lsv_id, edge=None):
@@ -201,6 +221,8 @@ class QuantificationWriter:
                         try:
                             lsv = m.lsv(lsv_id)
                             edge_idx = self._filter_edges(edge, lsv)
+                            if edge_idx is None or edge_idx == slice(None):
+                                continue
                             medians = lsv.median_psi()
                             psi = medians[edge_idx][group_idx]
                             found_psis.append(psi)
@@ -209,7 +231,7 @@ class QuantificationWriter:
                 if not found_psis:
                     return None
                 else:
-                    return [round(sum(found_psis) / len(found_psis), SIG_FIGS)]
+                    return [fRound(sum(found_psis) / len(found_psis))]
             return f
 
         def _het_stats(voila_files, stat_idx):
@@ -237,7 +259,7 @@ class QuantificationWriter:
 
                             for _edge in edges:
                                 edge_idx = self._filter_edges(_edge, lsv)
-                                if edge_idx is None:
+                                if edge_idx is None or edge_idx == slice(None):
                                     continue
                                 else:
                                     medians = lsv.median_psi()
@@ -247,7 +269,7 @@ class QuantificationWriter:
 
                                     vals.append(psi_g1-psi_g2)
 
-                            return (round(x, SIG_FIGS) for x in vals)
+                            return (fRound(x) for x in vals)
 
                         except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
                             continue
@@ -280,12 +302,12 @@ class QuantificationWriter:
                             vals = []
                             for _edge in edges:
                                 edge_idx = self._filter_edges(_edge, lsv)
-                                if edge_idx is None:
+                                if edge_idx is None or edge_idx == slice(None):
                                     continue
                                 else:
                                     vals.append(lsv.excl_incl[edge_idx][1] - lsv.excl_incl[edge_idx][0])
 
-                            return (round(x, SIG_FIGS) for x in vals)
+                            return (fRound(x) for x in vals)
 
                         except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
                             continue
@@ -305,16 +327,16 @@ class QuantificationWriter:
                                 vals = []
                                 for _edge in edges:
                                     edge_idx = self._filter_edges(_edge, lsv)
-                                    if edge_idx is None:
+                                    if edge_idx is None or edge_idx == slice(None):
                                         continue
                                     else:
                                         vals.append(matrix_area(bins[edge_idx], self.config.changing_between_group_dpsi))
-                                return (round(x, SIG_FIGS) for x in vals)
+                                return (fRound(x) for x in vals)
                             else:
                                 if self.avg_multival:
                                     return np.mean((matrix_area(b, self.config.changing_between_group_dpsi) for b in bins))
                                 return (
-                                            round(matrix_area(b, self.config.changing_between_group_dpsi), SIG_FIGS) for b in bins
+                                            fRound(matrix_area(b, self.config.changing_between_group_dpsi)) for b in bins
                                         )
                         except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
                             continue
@@ -358,7 +380,7 @@ class QuantificationWriter:
                                         lsv = m.lsv(lsv_id)
 
                                         edge_idx = self._filter_edges(_edge, lsv)
-                                        if edge_idx is None:
+                                        if edge_idx is None or edge_idx == slice(None):
                                             continue
                                         else:
 
@@ -376,7 +398,7 @@ class QuantificationWriter:
                                         lsv = m.lsv(lsv_id)
 
                                         edge_idx = self._filter_edges(_edge, lsv)
-                                        if edge_idx is None:
+                                        if edge_idx is None or edge_idx == slice(None):
                                             continue
                                         else:
                                             is_changing = lsv.changing(
@@ -396,26 +418,53 @@ class QuantificationWriter:
 
             return f
 
+        def _reads(splice_graph_file, gene_id, _experiment_names):
+            def f(lsv_id, edge=None):
+                with SpliceGraph(splice_graph_file) as sg:
+                    try:
+                        junc = {'start': edge.start, 'end': edge.end, 'gene_id': gene_id}
+                        if edge.ir:
+                            junc['start'] += 1
+                            junc['end'] -= 1
+                            reads = ceil(median((x['reads'] for x in sg.intron_retention_reads_exp(junc, _experiment_names))))
+                        else:
+                            reads = ceil(median((x['reads'] for x in sg.junction_reads_exp(junc, _experiment_names))))
+                    except:
+                        reads = ''
 
+                return [reads]
 
+            return f
 
         tmp = OrderedDict()
         self.types2headers = {'psi':[], 'dpsi':[]}
 
         tmp['junction_changing'] = (_junction_changing, self.config.voila_files)
 
+        # junc {'gene_id': 'ENSMUSG00000001419', 'start': 88168458, 'end': 88168632, 'has_reads': 1, 'annotated': 1, 'is_simplified': 0, 'is_constitutive': 0}
+
+
+
         for voila_file in self.config.voila_files:
 
             with Matrix(voila_file) as m:
                 analysis_type = m.analysis_type
                 group_names = m.group_names
+                experiment_names = m.experiment_names
+                if analysis_type == constants.ANALYSIS_PSI:
+                    experiment_names = experiment_names[:-1]
                 if analysis_type == constants.ANALYSIS_HETEROGEN:
                     stat_names = m.stat_names
                 else:
                     stat_names = None
 
+            if self.config.show_read_counts:
+                for group, experiments in zip(group_names, experiment_names):
+                    header = f'{group}_median_reads'
+                    tmp[header] = (_reads, self.config.splice_graph_file, self.graph.gene_id if self.graph else None, experiments)
 
             if analysis_type == constants.ANALYSIS_PSI:
+
                 for group in group_names:
                     for key in ("median_psi", "var_psi",):
                         header = "%s_%s" % (group, key)
@@ -455,6 +504,8 @@ class QuantificationWriter:
                             if key == "median_dpsi":
                                 self.dpsi_quant_idxs.append(len(tmp))
                                 tmp[header] = (_het_dpsi, [voila_file], [group_idxs[group1]], [group_idxs[group2]])
+
+
 
                     for j, key in enumerate(stat_names):
                         header = "%s-%s_het_%s" % (group1, group2, key.lower())
@@ -513,14 +564,51 @@ class MultiQuantWriter(QuantificationWriter):
                 missing_any = True
         return lsvs, missing_any
 
+    def _reads(self, splice_graph_file, gene_id, edge):
+        """
+        Find the median reads across all experiments for a specific junction
+        """
+
+        with SpliceGraph(splice_graph_file) as sg:
+
+            junc = {'start': edge.start, 'end': edge.end, 'gene_id': gene_id}
+            reads = [x['reads'] for x in (sg.junction_reads_exp(junc, experiment_names=None))]
+            if len(reads) == 0:
+                return None
+            try:
+                reads = ceil(median(reads))
+            except statistics.StatisticsError:
+                return None
+        return reads
+
     def event_changing(self, module, quant_identifiers):
+        if self.config.include_change_cases:
+            return self._event_changing_individual(module, quant_identifiers)
+        else:
+            return self._event_changing_classic(module, quant_identifiers)
+
+    def event_non_changing(self, module, quant_identifiers):
+        if self.config.include_change_cases:
+            return self._event_non_changing_individual(module, quant_identifiers)
+        else:
+            return self._event_non_changing_classic(module, quant_identifiers)
+
+    """
+    What's the point of this? 
+    
+    The methods used to gather the per-tissue-pair information slow down things considerably
+    So we have a method for cases where that's important or not. 
+    There is a bit of repeat code, but as things were in the middle of loops I didn't decide to split it out yet. 
+    """
+
+    def _event_changing_classic(self, module, quant_identifiers):
 
         # should only have one edge specified --
         # iterate through voila files, if we fine any case where junction is changing,
         # return true
         lsvs, missing_any = self.gen_lsvs_list(module, quant_identifiers)
         if missing_any:
-            return False
+            return False, []
         found_quant = False
 
         for voila_file in self.config.voila_files:
@@ -540,7 +628,7 @@ class MultiQuantWriter(QuantificationWriter):
 
                             edge_idx = self._filter_edges(_edge, lsv)
 
-                            if edge_idx is None:
+                            if edge_idx is None or edge_idx == slice(None):
                                 break
                             else:
 
@@ -566,7 +654,7 @@ class MultiQuantWriter(QuantificationWriter):
                             lsv = m.lsv(lsv_id)
 
                             edge_idx = self._filter_edges(_edge, lsv)
-                            if edge_idx is None:
+                            if edge_idx is None or edge_idx == slice(None):
                                 continue
                             else:
                                 is_changing = lsv.changing(
@@ -594,39 +682,49 @@ class MultiQuantWriter(QuantificationWriter):
                 # so we check if any primary ones passed, if this is not true, we move to the next
                 # voila file...
                 if any(bool(x) is True for x in junc_results):
-                    return True
+                    return True, []
 
-        return False if found_quant else ''
+        return (False, []) if found_quant else ('', [])
 
 
-    def event_non_changing(self, module, quant_identifiers):
+    def _event_non_changing_classic(self, module, quant_identifiers):
 
         lsvs, missing_any = self.gen_lsvs_list(module, quant_identifiers)
         if missing_any:
-            return False
+            return False, []
+
+
 
         junc_results = []
+        found_changing = False
 
         for voila_file in self.config.voila_files:
 
             with Matrix(voila_file) as m1:
                 analysis_type = m1.analysis_type
 
-
             for lsv_id, _edge in lsvs:
+
                 try:
                     if analysis_type == constants.ANALYSIS_HETEROGEN:
                         with view_matrix.ViewHeterogen(voila_file) as m:
                             lsv = m.lsv(lsv_id)
 
                             edge_idx = self._filter_edges(_edge, lsv)
-                            if edge_idx is None:
+                            if edge_idx is None or edge_idx == slice(None):
                                 continue
                             else:
                                 is_non_changing = lsv.nonchanging(self.config.non_changing_pvalue_threshold,
-                                                        self.config.non_changing_within_group_iqr,
-                                                        self.config.non_changing_between_group_dpsi,
-                                                        edge_idx)
+                                                                  self.config.non_changing_within_group_iqr,
+                                                                  self.config.non_changing_between_group_dpsi,
+                                                                  edge_idx)
+
+                                if not found_changing:
+                                    found_changing = lsv.changing(
+                                        self.config.changing_pvalue_threshold,
+                                        self.config.changing_between_group_dpsi,
+                                        edge_idx)
+
                                 junc_results.append(is_non_changing)
 
                     elif analysis_type == constants.ANALYSIS_DELTAPSI:
@@ -634,7 +732,7 @@ class MultiQuantWriter(QuantificationWriter):
                             lsv = m.lsv(lsv_id)
 
                             edge_idx = self._filter_edges(_edge, lsv)
-                            if edge_idx is None:
+                            if edge_idx is None or edge_idx == slice(None):
                                 continue
                             else:
                                 non_changing_quant = lsv.high_probability_non_changing(
@@ -642,13 +740,260 @@ class MultiQuantWriter(QuantificationWriter):
 
                                 is_non_changing = non_changing_quant >= self.config.probability_non_changing_threshold
 
+                                if not found_changing:
+                                    found_changing = lsv.changing(
+                                        self.config.changing_between_group_dpsi,
+                                        self.config.probability_changing_threshold,
+                                        edge_idx)
+
                                 junc_results.append(is_non_changing)
 
                 except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
                     continue
 
-        if not junc_results:
-            return ''
 
-        # bool() needed here because they are of type "numpy._bool" by default
-        return all(bool(x) is True for x in junc_results)
+
+        if not junc_results:
+            return '', []
+
+        num_cases = sum((1 if x == True else 0 for x in junc_results))
+
+        if found_changing:
+            return False, []
+
+        ratio_non_changing = num_cases / len(junc_results)
+
+        if ratio_non_changing >= self.config.permissive_event_non_changing_threshold:
+
+            # secondary check on reads
+            if self.config.non_changing_median_reads_threshold:
+                reads_per_junc_per_lsv = {}
+                for lsv_id, _edge in lsvs:
+                    if not _edge:
+                        continue
+                    mean_reads = self._reads(self.config.splice_graph_file, self.graph.gene_id if self.graph else None, _edge)
+                    if mean_reads is None:
+                        continue
+                    if lsv_id not in reads_per_junc_per_lsv:
+                        reads_per_junc_per_lsv[lsv_id] = []
+                    reads_per_junc_per_lsv[lsv_id].append(mean_reads)
+                for lsv_id, readlist in reads_per_junc_per_lsv.items():
+                    if sum(readlist) < self.config.non_changing_median_reads_threshold:
+                        return False, []
+            return True, []
+        return False, []
+
+
+
+    def _event_changing_individual(self, module, quant_identifiers):
+
+        # should only have one edge specified --
+        # iterate through voila files, if we fine any case where junction is changing,
+        # return true
+        lsvs, missing_any = self.gen_lsvs_list(module, quant_identifiers)
+        if missing_any:
+            return False, [''] * len(self.individual_change_cols)
+        found_quant = False
+
+        overall_changing = False
+        individual = []
+
+
+        for voila_file in self.config.voila_files:
+
+            with Matrix(voila_file) as m1:
+                analysis_type = m1.analysis_type
+
+            if analysis_type == constants.ANALYSIS_PSI:
+                continue
+
+            junc_results = []
+
+            for lsv_id, _edge in lsvs:
+
+                try:
+
+                    if analysis_type == constants.ANALYSIS_HETEROGEN:
+                        with view_matrix.ViewHeterogen(voila_file) as m:
+                            lsv = m.lsv(lsv_id)
+
+                            edge_idx = self._filter_edges(_edge, lsv)
+
+                            if edge_idx is None or edge_idx == slice(None):
+                                continue
+                            else:
+
+                                is_changing = lsv.changing(
+                                    self.config.changing_pvalue_threshold,
+                                    self.config.changing_between_group_dpsi,
+                                    edge_idx)
+
+                                junc_results.append(is_changing)
+
+                                is_changing_secondary = lsv.changing(
+                                    1.0,
+                                    self.config.changing_between_group_dpsi_secondary,
+                                    edge_idx)
+
+                                found_quant = True
+
+                                if not is_changing_secondary:
+                                    individual.append(False)
+                                    break
+
+                    elif analysis_type == constants.ANALYSIS_DELTAPSI:
+                        with view_matrix.ViewDeltaPsi(voila_file) as m:
+                            lsv = m.lsv(lsv_id)
+
+                            edge_idx = self._filter_edges(_edge, lsv)
+                            if edge_idx is None or edge_idx == slice(None):
+                                continue
+                            else:
+                                is_changing = lsv.changing(
+                                    self.config.changing_between_group_dpsi,
+                                    self.config.probability_changing_threshold,
+                                    edge_idx)
+
+                                junc_results.append(is_changing)
+
+                                is_changing_secondary = lsv.changing(
+                                    self.config.changing_between_group_dpsi_secondary,
+                                    self.config.probability_changing_threshold,
+                                    edge_idx)
+
+                                found_quant = True
+
+                                if not is_changing_secondary:
+                                    individual.append(False)
+                                    break
+
+                except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
+                    break
+
+            else:
+                # this executes is we never broke, in other words, all secondary filters passed
+                # so we check if any primary ones passed, if this is not true, we move to the next
+                # voila file...
+                if not junc_results:
+                    individual.append('')
+                else:
+                    if any(bool(x) is True for x in junc_results):
+                        overall_changing = True
+                        individual.append(True)
+                    else:
+                        individual.append(False)
+
+
+        if not found_quant:
+            return '', individual
+        return overall_changing, individual
+
+
+
+    def _event_non_changing_individual(self, module, quant_identifiers):
+
+        lsvs, missing_any = self.gen_lsvs_list(module, quant_identifiers)
+        if missing_any:
+            return False, [''] * len(self.individual_nonchange_cols)
+
+        junc_results = []
+        found_changing = False
+        individual = []
+
+        for voila_file in self.config.voila_files:
+
+            with Matrix(voila_file) as m1:
+                analysis_type = m1.analysis_type
+
+            if analysis_type == constants.ANALYSIS_PSI:
+                continue
+
+            _junc_results = []
+            for lsv_id, _edge in lsvs:
+
+                try:
+                    if analysis_type == constants.ANALYSIS_HETEROGEN:
+                        with view_matrix.ViewHeterogen(voila_file) as m:
+                            lsv = m.lsv(lsv_id)
+
+                            edge_idx = self._filter_edges(_edge, lsv)
+                            if edge_idx is None or edge_idx == slice(None):
+                                continue
+                            else:
+                                is_non_changing = lsv.nonchanging(self.config.non_changing_pvalue_threshold,
+                                                                  self.config.non_changing_within_group_iqr,
+                                                                  self.config.non_changing_between_group_dpsi,
+                                                                  edge_idx)
+
+                                if not found_changing:
+                                    found_changing = lsv.changing(
+                                        self.config.changing_pvalue_threshold,
+                                        self.config.changing_between_group_dpsi,
+                                        edge_idx)
+
+                                _junc_results.append(is_non_changing)
+
+                    elif analysis_type == constants.ANALYSIS_DELTAPSI:
+                        with view_matrix.ViewDeltaPsi(voila_file) as m:
+                            lsv = m.lsv(lsv_id)
+
+                            edge_idx = self._filter_edges(_edge, lsv)
+                            if edge_idx is None or edge_idx == slice(None):
+                                continue
+                            else:
+                                non_changing_quant = lsv.high_probability_non_changing(
+                                    self.config.non_changing_between_group_dpsi, edge_idx)
+
+                                is_non_changing = non_changing_quant >= self.config.probability_non_changing_threshold
+
+                                if not found_changing:
+                                    found_changing = lsv.changing(
+                                        self.config.changing_between_group_dpsi,
+                                        self.config.probability_changing_threshold,
+                                        edge_idx)
+
+                                _junc_results.append(is_non_changing)
+
+                except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
+                    continue
+
+            if self.config.include_change_cases:
+                if _junc_results:
+                    individual.append(all(x == True for x in _junc_results))
+                else:
+                    individual.append('')
+
+            junc_results += _junc_results
+
+
+
+        if not junc_results:
+            return '', [''] * len(self.individual_nonchange_cols)
+
+        num_cases = sum((1 if x == True else 0 for x in junc_results))
+
+        if found_changing:
+            return False, individual
+
+        ratio_non_changing = num_cases / len(junc_results)
+
+        if ratio_non_changing >= self.config.permissive_event_non_changing_threshold:
+
+            # secondary check on reads
+            if self.config.non_changing_median_reads_threshold:
+                reads_per_junc_per_lsv = {}
+                for lsv_id, _edge in lsvs:
+                    if not _edge:
+                        continue
+                    mean_reads = self._reads(self.config.splice_graph_file, self.graph.gene_id if self.graph else None, _edge)
+                    if mean_reads is None:
+                        continue
+                    if lsv_id not in reads_per_junc_per_lsv:
+                        reads_per_junc_per_lsv[lsv_id] = []
+                    reads_per_junc_per_lsv[lsv_id].append(mean_reads)
+                for lsv_id, readlist in reads_per_junc_per_lsv.items():
+                    if sum(readlist) < self.config.non_changing_median_reads_threshold:
+                        return False, individual
+            return True, individual
+        return False, individual
+

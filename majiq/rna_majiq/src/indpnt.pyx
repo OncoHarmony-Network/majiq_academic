@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 import rna_majiq.src.io as majiq_io
 cimport rna_majiq.src.io as majiq_io
@@ -282,8 +283,8 @@ cdef void _core_independent(object self):
     cdef float visualization_var_max = self.visualization_std * self.visualization_std
 
     majiq_logger.create_if_not_exists(self.outDir)
-    logger = majiq_logger.get_logger("%s/het_majiq.log" % self.outDir, silent=self.silent,
-                                     debug=self.debug)
+    logFile = self.logger if self.logger else f"{self.outDir}/het_majiq.log"
+    logger = majiq_logger.get_logger(logFile, silent=self.silent, debug=self.debug)
 
     logger.info(f"Majiq deltapsi heterogeneous v{constants.VERSION}")
     logger.info("Command: %s" % " ".join(sys.argv))
@@ -345,11 +346,7 @@ cdef void _core_independent(object self):
 
 
     if not self.keep_tmpfiles:
-        for cond_name in file_cond.keys():
-            for fidx in range(len(file_cond[cond_name])):
-                fname = constants.get_tmp_psisample_file(self.outDir, "%s_%s" %(cond_name, fidx) )
-                if os.path.exists(fname):
-                    os.remove(fname)
+        shutil.rmtree(constants.get_tmp_dir(self.outDir))
 
     if self.mem_profile:
         mem_allocated = int(psutil.Process().memory_info().rss) / (1024 ** 2)

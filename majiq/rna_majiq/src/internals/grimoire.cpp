@@ -483,7 +483,7 @@ namespace grimoire {
         return 0 ;
     }
 
-    int Gene::detect_lsvs(vector<LSV*> &lsv_list, bool lsv_strict) {
+    int Gene::detect_lsvs(vector<LSV*> &lsv_list, bool lsv_strict, bool only_source, bool only_target) {
 
         map<string, Exon*>::iterator exon_mapIt ;
         vector<LSV*> lsvGenes ;
@@ -524,16 +524,27 @@ namespace grimoire {
                     set_difference((slvs.first).begin(), (slvs.first).end(), t1.begin(), t1.end(), inserter(d1, d1.begin())) ;
                     set_difference(t1.begin(), t1.end(), (slvs.first).begin(), (slvs.first).end(), inserter(d2, d2.begin())) ;
 
-                    // when do we remove target LSV from output?
-                    if (d2.size() == 0 && (lsv_strict || d1.size() == 0)) {
-                        rem_src = true ;  // remove target LSV
-                        break ;
+                    // if specifying either target or source only, we override the default behavior
+                    if (only_target){
+                        remLsv.insert(slvs.second->get_id()) ;
+                    }else if (only_source){
+                        rem_src = true;
+                    }else{
+                        // detect removal of course or target using the usual method
+
+                        // when do we remove target LSV from output?
+                        if (d2.size() == 0 && (lsv_strict || d1.size() == 0)) {
+                            rem_src = true ;  // remove target LSV
+                            break ;
+                        }
+
+                        // when do we remove source LSV from output?
+                        if (lsv_strict && (d1.size() == 0 && d2.size() > 0)) {
+                            remLsv.insert(slvs.second->get_id()) ;
+                        }
                     }
 
-                    // when do we remove source LSV from output?
-                    if (lsv_strict && (d1.size() == 0 && d2.size() > 0)) {
-                        remLsv.insert(slvs.second->get_id()) ;
-                    }
+
                 }
                 if (rem_src){
                     delete lsvObj ;

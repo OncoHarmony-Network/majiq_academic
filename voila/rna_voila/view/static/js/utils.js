@@ -69,9 +69,9 @@ function getCanvasFontSize(el = document.body) {
     return `${fontWeight} ${fontSize} ${fontFamily}`;
 }
 
-function download_svg_elem(svg, filename){
+function save_data_as_file(mimetype, content, filename){
     const element = document.createElement('a');
-    element.setAttribute('href', 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg));
+    element.setAttribute('href', mimetype + encodeURIComponent(content));
     element.setAttribute('download', filename);
 
     element.style.display = 'none';
@@ -80,4 +80,12 @@ function download_svg_elem(svg, filename){
     element.click();
 
     document.body.removeChild(element);
+}
+
+function save_html_file(html_content, filename){
+    save_data_as_file('data:text/html;charset=utf-8,', html_content, filename);
+}
+
+function download_svg_elem(svg, filename){
+    save_data_as_file('data:image/svg+xml;charset=utf-8,', svg, filename);
 }

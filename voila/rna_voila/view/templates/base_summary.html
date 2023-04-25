@@ -5,11 +5,15 @@
 {% endblock %}
 
 {% block script %}
+    <script src="{{ url_for('static', filename='js/lib/single-file.js') }}"></script>
     <script src="{{ url_for('static', filename='js/lsvtools.js') }}"></script>
     <script>
         const legend = document.querySelector('.legend');
         new Lsv().renderFloatingLegend(legend)
         var highlightFirst = false;
+        const gene_name = "{{ gene.name }}";
+        const gene_id = "{{ gene.id }}";
+
 
         const sg_simplified_view = "{{ session.get('omit_simplified', False) }}";
         if (sg_simplified_view === 'True') $('#sg-simplified-view').prop('checked', true);
@@ -86,6 +90,35 @@
 
         });
 
+        function sanitize_downloaded_html(original_content){
+            let sanitized = document.createElement( 'html' );
+            sanitized.innerHTML = original_content;
+            sanitized.querySelectorAll('.rm-dl, #results_filter, #results_length, #results_paginate,' +
+                ' .splice-graph-remove, .splice-graph-download, .copy-lsv, .save-lsv, .violin-download').forEach(function(a){
+                a.remove()
+            })
+            sanitized.querySelectorAll('.heatmap-download').forEach(function(a){
+                a.style.visibility = 'hidden';
+            })
+            sanitized.querySelectorAll('input').forEach(function(a){
+                a.disabled = true;
+            })
+            // sanitized.getElementById('results_filter').remove();
+            // sanitized.getElementById('results_length').remove();
+            // sanitized.getElementById('results_paginate').remove();
+            return sanitized.outerHTML;
+        }
+
+        $('.page-download').click(async function(){
+            const { content, title, filename } = await singlefile.getPageData({
+                removeImports: true,
+                removeScripts: true,
+                removeAudioSrc: true,
+                removeVideoSrc: true
+            });
+            save_html_file(sanitize_downloaded_html(content), `voila-${gene_name}-${gene_id}.html`);
+        })
+
     </script>
     {% block analysis_type_script %}{% endblock %}
 {% endblock %}
@@ -95,19 +128,28 @@
         <a href class="pure-menu-heading">
             <img height="30" src="{{ url_for('static', filename='img/LogoOnly_white.svg') }}">
         </a>
-        <ul class="pure-menu-list">
+        <ul class="pure-menu-list rm-dl">
             <li class="pure-menu-item">
                 <a href="{{ url_for('main.index') }}" class="pure-menu-link">Index</a>
             </li>
             <li class="pure-menu-item">
-                <span class="tools-menu-btn splice-graph-tools pure-menu-link" id="splice-graph-menu-btn">Splice Graph</span>
+                <span class="tools-menu-btn pure-menu-link" id="splice-graph-menu-btn">Splice Graph</span>
             </li>
             {#            <li class="pure-menu-item">#}
             {#                <span class="tools-menu-btn lsv-tools pure-menu-link">LSV</span>#}
             {#            </li>#}
+            {% if analysis_type == 'heterogen' %}
+                <li class="pure-menu-item">
+                    <span class="tools-menu-btn pure-menu-link" id="plot-options-menu-btn">Plot Options</span>
+                </li>
+            {% endif %}
         </ul>
 
-        <ul class="menu-right pure-menu-list">
+        <ul class="menu-right pure-menu-list rm-dl">
+            <li class="pure-menu-item">
+                <img height="30" class="page-download pure-menu-link"
+                     src="{{ url_for('static', filename='img/floppy.svg') }}">
+            </li>
             <li class="pure-menu-item">
                 <img height="30" class="prev-gene pure-menu-link"
                      src="{{ url_for('static', filename='img/left_arrow.svg') }}">
@@ -148,10 +190,10 @@
             </a>
         </div>
         <div>
-            <img class="toggle-scale" src="{{ url_for('static', filename='img/solve-icon16.png') }}">
-            <img class="zoom-in" src="{{ url_for('static', filename='img/zoom_in.png') }}">
-            <img class="zoom-out" src="{{ url_for('static', filename='img/zoom_out.png') }}">
-            <img class="zoom-reset" src="{{ url_for('static', filename='img/undo.png') }}">
+            <img class="toggle-scale rm-dl" src="{{ url_for('static', filename='img/solve-icon16.png') }}">
+            <img class="zoom-in rm-dl" src="{{ url_for('static', filename='img/zoom_in.png') }}">
+            <img class="zoom-out rm-dl" src="{{ url_for('static', filename='img/zoom_out.png') }}">
+            <img class="zoom-reset rm-dl" src="{{ url_for('static', filename='img/undo.png') }}">
         </div>
         <div>
             <div>
@@ -159,10 +201,10 @@
             </div>
             <div class="coordinates"></div>
         </div>
-        {% block heatmap_form %}{% endblock %}
+
     </div>
 
-    <div class="tools-menu splice-graph-tools hide-tools-menu pure-g">
+    <div class="tools-menu hide-tools-menu pure-g" id="splice-graph-tools-box">
         <div class="pure-u-1-3">
             <form class="splice-graph-form pure-form pure-form-aligned">
                 <fieldset>
@@ -213,6 +255,8 @@
         </div>
 
     </div>
+
+    {% block het_groups_form %}{% endblock %}
 
 
     <div class="tools-menu lsv-tools hide-tools-menu pure-g">
