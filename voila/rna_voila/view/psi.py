@@ -2,7 +2,8 @@ import os
 from bisect import bisect
 from operator import itemgetter
 
-from flask import render_template, url_for, jsonify, request, session, Response
+from flask import render_template, url_for, jsonify, request, session, Response, redirect, abort
+
 
 from rna_voila.api.view_matrix import ViewPsi, ViewPsis
 from rna_voila.api.view_splice_graph import ViewSpliceGraph
@@ -12,6 +13,7 @@ from rna_voila.view.datatables import DataTables
 from rna_voila.view.forms import LsvFiltersForm
 from rna_voila.config import ViewConfig
 from rna_voila.exceptions import LsvIdNotFoundInVoilaFile, LsvIdNotFoundInAnyVoilaFile, GeneIdNotFoundInVoilaFile
+
 
 app, bp = views.get_bp(__name__)
 
@@ -48,7 +50,7 @@ def gene(gene_id):
             lsv_exons = sg.lsv_exons(gene_id, lsv_junctions)
             start, end = views.lsv_boundries(lsv_exons)
             gene = sg.gene(gene_id)
-            ucsc[lsv.lsv_id] = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
+            ucsc[lsv.lsv_id] = url_for('main.generate_ucsc_link', lsv_id=lsv.lsv_id)
             exon_num = views.find_exon_number(sg.exons(gene_id), lsv.reference_exon, gene['strand'])
             if type(exon_num) is int:
                 # accounting for 'unk' exon numbers
@@ -395,6 +397,12 @@ def download_genes():
 @bp.route('/copy-lsv/<lsv_id>', methods=('POST',))
 def copy_lsv(lsv_id):
     return views.copy_lsv(lsv_id, ViewPsi, voila_file=ViewConfig().voila_files[0])
+
+
+@bp.route('/generate_ucsc_link', methods=('GET',))
+def generate_ucsc_link():
+    return views._generate_ucsc_link(request.args, ViewPsis)
+
 
 
 app.register_blueprint(bp)

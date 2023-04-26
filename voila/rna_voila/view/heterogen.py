@@ -104,7 +104,7 @@ def gene(gene_id):
             lsv_exons = sg.lsv_exons(gene_id, lsv_junctions)
             start, end = views.lsv_boundries(lsv_exons)
             gene = sg.gene(gene_id)
-            ucsc[het.lsv_id] = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
+            ucsc[het.lsv_id] = url_for('main.generate_ucsc_link', lsv_id=het.lsv_id)
             exon_num = views.find_exon_number(sg.exons(gene_id), het.reference_exon, gene['strand'])
             if type(exon_num) is int:
                 # accounting for 'unk' exon numbers
@@ -433,5 +433,8 @@ def download_genes():
 def copy_lsv(lsv_id):
     return views.copy_lsv(lsv_id, ViewHeterogens)
 
+@bp.route('/generate_ucsc_link', methods=('GET',))
+def generate_ucsc_link():
+    return views._generate_ucsc_link(request.args, ViewHeterogens)
 
 app.register_blueprint(bp)

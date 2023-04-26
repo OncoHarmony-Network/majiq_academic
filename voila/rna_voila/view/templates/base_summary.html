@@ -185,7 +185,7 @@
             {% endif %}
         </div>
         <div>
-            <a class="ucsc-gene" target="_blank" rel="noopener noreferrer" href="{{ gene.href }}">
+            <a class="ucsc-gene" target="_blank" rel="noopener noreferrer" href="{{ url_for('main.generate_ucsc_link', gene_id=gene.id) }}">
                 <img src="{{ url_for('static', filename='img/ucsc.png') }}">
             </a>
         </div>
