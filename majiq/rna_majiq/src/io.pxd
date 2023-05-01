@@ -5,9 +5,13 @@ from libcpp.map cimport map
 cimport numpy as np
 import numpy as np
 from rna_majiq.src.internals.qLSV cimport qLSV
+from rna_majiq.c.splice_graph_sql cimport transcript_exon as sg_transcript_exon
+
+cdef extern from "sqlite3.h":
+    struct sqlite3
 
 cdef int read_gff(str filename, map[string, Gene*]& all_genes, vector[string]& gid_vec, bint simpl, bint enable_anot_ir,
-                  object logging) except -1
+                  object logging, sqlite3 * db) except -1
 cdef void get_coverage_mat_lsv(map[string, qLSV*]& result, list file_list, int nthreads, bint fltr,
                                int minreads, int minnonzero)
 cdef int dump_lsv_coverage_mat(str filename, list cov_list, list type_list, list junc_info, str exp_name)

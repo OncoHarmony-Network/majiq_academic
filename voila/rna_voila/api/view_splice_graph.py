@@ -1,6 +1,7 @@
 from operator import itemgetter
 
 from rna_voila.api import SpliceGraph
+from rna_voila.api.splice_graph import transcript_exon_fieldnames
 from rna_voila.config import ViewConfig
 from statistics import median, StatisticsError
 from math import ceil
@@ -498,3 +499,25 @@ class ViewSpliceGraph(SpliceGraph):
         gene_dict['alt_ends'] = tuple(list(a.values())[0] for a in self.alt_ends(gene_id))
 
         return gene_dict
+
+    def gene_transcript_exons(self, gene_id):
+        """
+        Get all exons for specified gene id
+        :param gene_id: gene id
+        :return: list of exons
+        """
+
+        query = self.conn.execute('''
+                                SELECT gene_id, transcript_id, start, end 
+                                FROM transcript_exon 
+                                WHERE gene_id=?
+                                ORDER BY transcript_id
+                                ''', (gene_id,))
+        transcripts = {}
+        cur_id = None
+        for row in self._iter_results(query, transcript_exon_fieldnames):
+            if row['transcript_id'] != cur_id:
+                transcripts[row['transcript_id']] = []
+                cur_id = row['transcript_id']
+            transcripts[row['transcript_id']].append({'start': row['start'], 'end': row['end'], 'color': 'grey'})
+        return transcripts
