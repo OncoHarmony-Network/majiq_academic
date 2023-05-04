@@ -417,6 +417,8 @@ class ViewSpliceGraph(SpliceGraph):
 
         junc_reads = {}
         ir_reads = {}
+        all_junctions = list(self.junctions(gene_id, omit_simplified=self.omit_simplified))
+        all_ir = list(self.intron_retentions(gene_id, omit_simplified=self.omit_simplified))
 
         for experiment_names in experiment_names_list:
             combined_name = next((n for n in experiment_names if ' Combined' in n), '')
@@ -429,7 +431,7 @@ class ViewSpliceGraph(SpliceGraph):
                     junc_reads[combined_name] = {}
                     ir_reads[combined_name] = {}
 
-            for junc in self.junctions(gene_id, omit_simplified=self.omit_simplified):
+            for junc in all_junctions:
                 junc_start, junc_end = itemgetter('start', 'end')(junc)
 
                 for r in self.junction_reads_exp(junc, experiment_names):
@@ -457,7 +459,7 @@ class ViewSpliceGraph(SpliceGraph):
                         except KeyError:
                             junc_reads[combined_name][junc_start] = {junc_end: median_reads}
 
-            for ir in self.intron_retentions(gene_id, omit_simplified=self.omit_simplified):
+            for ir in all_ir:
                 ir_start, ir_end = itemgetter('start', 'end')(ir)
 
                 for r in self.intron_retention_reads_exp(ir, experiment_names):
