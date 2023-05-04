@@ -1,10 +1,11 @@
 import json
 from itertools import chain
 
-import h5py
+
 import numpy as np
 
 from rna_voila import constants
+from rna_voila.api.matrix_hdf5 import MatrixHdf5
 from rna_voila.api.view_matrix import ViewHeterogens, ViewDeltaPsi, ViewPsi, ViewPsis, ViewHeterogen
 from rna_voila.api.view_splice_graph import ViewSpliceGraph
 from rna_voila.config import ViewConfig
@@ -65,21 +66,24 @@ class Index:
         :return:
         """
 
-        with h5py.File(voila_file, 'a') as h:
-            index_in_h = 'index' in h
-
-            if remove_index and index_in_h:
-                voila_log().info('Removing index from HDF5')
-                del h['index']
-
-            # voila_files = ViewConfig().voila_files
-
-            # if 'input_hash' in h:
-            #     prior = h.get('input_hash')[0].decode('utf-8')
-            #     new = Index._get_files_hash(voila_files)
-            #     index_in_h = (prior == new)
-
-            return index_in_h
+        with MatrixHdf5(voila_file, 'r') as m:
+            return m.has_index()
+        #
+        # with h5py.File(voila_file, 'a') as h:
+        #     index_in_h = 'index' in h
+        #
+        #     if remove_index and index_in_h:
+        #         voila_log().info('Removing index from HDF5')
+        #         del h['index']
+        #
+        #     # voila_files = ViewConfig().voila_files
+        #
+        #     # if 'input_hash' in h:
+        #     #     prior = h.get('input_hash')[0].decode('utf-8')
+        #     #     new = Index._get_files_hash(voila_files)
+        #     #     index_in_h = (prior == new)
+        #
+        #     return index_in_h
 
     @staticmethod
     def _get_files_hash(voila_files):
@@ -109,14 +113,10 @@ class Index:
 
         voila_files = ViewConfig().voila_files
 
-        with h5py.File(voila_file, 'a') as h:
-            if 'index' in h:
-                del h['index']
-            if 'input_hash' in h:
-                del h['input_hash']
-            h.create_dataset('index', voila_index.shape, data=voila_index)
+        with MatrixHdf5(voila_file, 'w') as m:
             hashval = Index._get_files_hash(voila_files)
-            h.create_dataset("input_hash", (1,), dtype="S40", data=(hashval.encode('utf-8'),))
+            m.write_index(voila_index, hashval)
+
 
     @staticmethod
     def _get_voila_index_file():
@@ -451,11 +451,10 @@ class Index:
         except AttributeError:
             pass
 
-        with h5py.File(index_file, 'r') as h:
+        with MatrixHdf5(index_file, 'r') as m:
 
             try:
-
-                for row in h['index'][()]:
+                for row in m.get_index():
                     if gene_id is None or gene_id == row[1]:
                         yield dict(zip(keys, row))
 

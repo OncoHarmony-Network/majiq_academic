@@ -15,6 +15,16 @@ from rna_voila.vlsv import collapse_matrix, matrix_area
 def lsv_id_to_gene_id(lsv_id):
     return ':'.join(lsv_id.split(':')[:-2])
 
+opened_voila_files = {}
+
+def open_hdf5(filename, mode):
+    filename = str(filename)
+    if mode == 'r':
+        if filename not in opened_voila_files:
+            print('opening', mode, filename)
+            opened_voila_files[filename] = h5py.File(filename, mode, libver='latest')
+        return opened_voila_files[filename]
+    return h5py.File(filename, mode, libver='latest')
 
 class MatrixHdf5:
     LSVS = 'lsvs'
@@ -28,6 +38,7 @@ class MatrixHdf5:
         """
         self.voila_tsv = voila_tsv
         self.voila_file = voila_file
+        self.mode = mode
         self.dt = h5py.special_dtype(vlen=str)
         self._group_names = None
         self._tsv_writer = None
@@ -36,7 +47,7 @@ class MatrixHdf5:
         self._prior = None
 
         if voila_file:
-            self.h = h5py.File(filename, mode, libver='latest')
+            self.h = open_hdf5(filename, mode)
 
 
     def __enter__(self):
@@ -45,9 +56,24 @@ class MatrixHdf5:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
+    def has_index(self):
+        return 'index' in self.h
+
+    def write_index(self, index, hashval):
+        if 'index' in self.h:
+            del self.h['index']
+        if 'input_hash' in self.h:
+            del self.h['input_hash']
+        self.h.create_dataset('index', index.shape, data=index)
+        self.h.create_dataset("input_hash", (1,), dtype="S40", data=(hashval.encode('utf-8'),))
+
+    def get_index(self):
+        return self.h['index'][()]
+
     def close(self):
         if self.voila_file:
-            self.h.close()
+            if self.mode != 'r':
+                self.h.close()
 
         if self.voila_tsv:
             self._tsv_file.close()
