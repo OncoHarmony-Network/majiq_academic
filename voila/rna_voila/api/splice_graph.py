@@ -271,6 +271,25 @@ class Junctions(SpliceGraphSQL):
 
         return self._iter_results(query, junc_reads_fieldnames)
 
+    def junction_reads_exp_opt(self, gene_id):
+        """
+        for a junction and a set of experiment names, get a list of reads.
+        :param junction: junction dictionary
+        :param experiment_names: list of experiment names
+        :return: list of reads dictionaries
+        """
+        q_s = '''
+            SELECT reads, experiment_name, junction_start, junction_end
+            FROM junction_reads
+            WHERE junction_gene_id=?
+            '''
+        query = self.conn.execute(q_s, (gene_id,))
+        res = {}
+
+        for reads, expname, start, end in query:
+            res[(expname, start, end)] = reads
+        return res
+
 
 class IntronRetentions(SpliceGraphSQL):
     def intron_retentions(self, gene_id, omit_simplified=False):
@@ -316,6 +335,20 @@ class IntronRetentions(SpliceGraphSQL):
         query = self.conn.execute(q_s, itemgetter('start', 'end', 'gene_id')(ir))
 
         return self._iter_results(query, ir_reads_fieldnames)
+
+    def intron_retention_reads_exp_opt(self, gene_id):
+
+        q_s = '''
+            SELECT reads, experiment_name, intron_retention_start, intron_retention_end
+            FROM intron_retention_reads
+            WHERE intron_retention_gene_id=?
+            '''
+        query = self.conn.execute(q_s, (gene_id,))
+        res = {}
+
+        for reads, expname, start, end in query:
+            res[(expname, start, end)] = reads
+        return res
 
 
 class AltStarts(SpliceGraphSQL):

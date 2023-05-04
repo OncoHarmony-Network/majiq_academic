@@ -417,8 +417,12 @@ class ViewSpliceGraph(SpliceGraph):
 
         junc_reads = {}
         ir_reads = {}
+        combined_junc_reads = {}
+        combined_ir_reads = {}
         all_junctions = list(self.junctions(gene_id, omit_simplified=self.omit_simplified))
         all_ir = list(self.intron_retentions(gene_id, omit_simplified=self.omit_simplified))
+        all_junc_reads = self.junction_reads_exp_opt(gene_id)
+        all_ir_reads = self.intron_retention_reads_exp_opt(gene_id)
 
         for experiment_names in experiment_names_list:
             combined_name = next((n for n in experiment_names if ' Combined' in n), '')
@@ -431,57 +435,67 @@ class ViewSpliceGraph(SpliceGraph):
                     junc_reads[combined_name] = {}
                     ir_reads[combined_name] = {}
 
+
             for junc in all_junctions:
                 junc_start, junc_end = itemgetter('start', 'end')(junc)
 
-                for r in self.junction_reads_exp(junc, experiment_names):
-                    reads = r['reads']
-                    exp_name = r['experiment_name']
+                for exp_name in experiment_names:
+
+                    try:
+                        reads = all_junc_reads[(exp_name, junc_start, junc_end)]
+                    except:
+                        continue
+
                     try:
                         junc_reads[exp_name][junc_start][junc_end] = reads
+                        if combined_name:
+                            combined_junc_reads[junc_start][junc_end].append(reads)
                     except KeyError:
                         junc_reads[exp_name][junc_start] = {junc_end: reads}
+                        if combined_name:
+                            combined_junc_reads[junc_start] = {junc_end: [reads]}
 
-                    if combined_name:
-                        def get_junc_reads():
-                            for n in experiment_names:
-                                try:
-                                    yield junc_reads[n][junc_start][junc_end]
-                                except KeyError:
-                                    yield 0
-                        try:
-                            median_reads = ceil(median(get_junc_reads()))
-                        except StatisticsError:
-                            median_reads = 0
+                if combined_name:
 
-                        try:
-                            junc_reads[combined_name][junc_start][junc_end] = median_reads
-                        except KeyError:
-                            junc_reads[combined_name][junc_start] = {junc_end: median_reads}
+                    try:
+                        median_reads = ceil(median(combined_junc_reads[junc_start][junc_end]))
+                    except StatisticsError:
+                        median_reads = 0
+                    except KeyError:
+                        median_reads = 0
+
+                    try:
+                        junc_reads[combined_name][junc_start][junc_end] = median_reads
+                    except KeyError:
+                        junc_reads[combined_name][junc_start] = {junc_end: median_reads}
 
             for ir in all_ir:
                 ir_start, ir_end = itemgetter('start', 'end')(ir)
 
-                for r in self.intron_retention_reads_exp(ir, experiment_names):
+                for exp_name in experiment_names:
 
-                    reads, exp_name = itemgetter('reads', 'experiment_name')(r)
+                    try:
+                        reads = all_ir_reads[(exp_name, ir_start, ir_end)]
+                    except:
+                        continue
+
 
                     try:
                         ir_reads[exp_name][ir_start][ir_end] = reads
+                        if combined_name:
+                            combined_ir_reads[ir_start][ir_end].append(reads)
                     except KeyError:
                         ir_reads[exp_name][ir_start] = {ir_end: reads}
+                        if combined_name:
+                            combined_ir_reads[ir_start] = {ir_end: [reads]}
 
                 if combined_name:
-                    def get_ir_reads():
-                        for n in experiment_names:
-                            try:
-                                yield ir_reads[n][ir_start][ir_end]
-                            except KeyError:
-                                yield 0
 
                     try:
-                        median_reads = ceil(median(get_ir_reads()))
+                        median_reads = ceil(median(combined_ir_reads[ir_start][ir_end]))
                     except StatisticsError:
+                        median_reads = 0
+                    except KeyError:
                         median_reads = 0
 
                     try:
