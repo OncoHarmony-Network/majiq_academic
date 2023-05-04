@@ -22,7 +22,7 @@ def open_hdf5(filename, mode):
     if mode == 'r':
         if filename not in opened_voila_files:
             print('opening', mode, filename)
-            opened_voila_files[filename] = h5py.File(filename, mode, libver='latest')
+            opened_voila_files[filename] = h5py.File(filename, mode, libver='latest', driver='core', backing_store=False)
         return opened_voila_files[filename]
     return h5py.File(filename, mode, libver='latest')
 
