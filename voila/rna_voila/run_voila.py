@@ -68,6 +68,10 @@ sys_parser = argparse.ArgumentParser(add_help=False)
 sys_parser.add_argument('-j', '--nproc', type=int, default=min(os.cpu_count(), max(int(os.cpu_count() / 2), 1)),
                         help='Number of processes used to produce output. Default is half of system processes. ')
 sys_parser.add_argument('--debug', action='store_true')
+sys_parser.add_argument('--memory-map-hdf5', action='store_true',
+                        help='by default, hdf5 voila files will be opened and read as needed, however, for greater '
+                             'performance it may help to instead preload these files into memory, if your server has '
+                             'sufficient RAM. Use this option to memory map the files')
 
 
 # tsv parser

@@ -17,19 +17,28 @@ def lsv_id_to_gene_id(lsv_id):
 
 opened_voila_files = {}
 
+def _open_hdf5(filename, mode):
+    return h5py.File(filename, mode, libver='latest')
+
 def open_hdf5(filename, mode):
+    from rna_voila.config import ViewConfig
+    from rna_voila.voila_log import voila_log
+    config = ViewConfig()
+
     filename = str(filename)
     if mode == 'r':
-        if filename not in opened_voila_files:
-            print('opening', mode, filename)
-            opened_voila_files[filename] = h5py.File(filename, mode, libver='latest', driver='core', backing_store=False)
-        return opened_voila_files[filename]
-    return h5py.File(filename, mode, libver='latest')
+        if config.memory_map_hdf5:
+            if filename not in opened_voila_files:
+                voila_log().debug(f'memory mapping {filename}')
+                opened_voila_files[filename] = h5py.File(filename, mode, libver='latest', driver='core', backing_store=False)
+            return opened_voila_files[filename]
+
+    return _open_hdf5(filename, mode)
 
 class MatrixHdf5:
     LSVS = 'lsvs'
 
-    def __init__(self, filename, mode='r', voila_file=True, voila_tsv=False):
+    def __init__(self, filename, mode='r', voila_file=True, voila_tsv=False, pre_config=False):
         """
         Access voila's HDF5 file.
 
@@ -47,7 +56,7 @@ class MatrixHdf5:
         self._prior = None
 
         if voila_file:
-            self.h = open_hdf5(filename, mode)
+            self.h = _open_hdf5(filename, mode) if pre_config else open_hdf5(filename, mode)
 
 
     def __enter__(self):
