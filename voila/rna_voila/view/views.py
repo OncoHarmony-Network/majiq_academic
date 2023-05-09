@@ -249,6 +249,7 @@ def gene_view(summary_template, gene_id, view_matrix, **kwargs):
         })
 
         kwargs['gene'] = gene
+        kwargs['disable_reads_filter'] = ViewConfig().disable_reads
 
         return render_template(summary_template, **kwargs)
 

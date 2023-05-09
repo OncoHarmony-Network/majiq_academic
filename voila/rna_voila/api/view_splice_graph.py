@@ -421,87 +421,106 @@ class ViewSpliceGraph(SpliceGraph):
         combined_ir_reads = {}
         all_junctions = list(self.junctions(gene_id, omit_simplified=self.omit_simplified))
         all_ir = list(self.intron_retentions(gene_id, omit_simplified=self.omit_simplified))
-        all_junc_reads = self.junction_reads_exp_opt(gene_id)
-        all_ir_reads = self.intron_retention_reads_exp_opt(gene_id)
-
-        for experiment_names in experiment_names_list:
-            combined_name = next((n for n in experiment_names if ' Combined' in n), '')
-            experiment_names = [e for e in experiment_names if e != combined_name]
-
-            for name in experiment_names:
-                junc_reads[name] = {}
-                ir_reads[name] = {}
-                if combined_name:
-                    junc_reads[combined_name] = {}
-                    ir_reads[combined_name] = {}
 
 
+        if not experiment_names_list:
+            exp_name = "splice graph"
+            junc_reads[exp_name] = {}
+            ir_reads[exp_name] = {}
             for junc in all_junctions:
                 junc_start, junc_end = itemgetter('start', 'end')(junc)
-
-                for exp_name in experiment_names:
-
-                    try:
-                        reads = all_junc_reads[(exp_name, junc_start, junc_end)]
-                    except:
-                        continue
-
-                    try:
-                        junc_reads[exp_name][junc_start][junc_end] = reads
-                        if combined_name:
-                            combined_junc_reads[junc_start][junc_end].append(reads)
-                    except KeyError:
-                        junc_reads[exp_name][junc_start] = {junc_end: reads}
-                        if combined_name:
-                            combined_junc_reads[junc_start] = {junc_end: [reads]}
-
-                if combined_name:
-
-                    try:
-                        median_reads = ceil(median(combined_junc_reads[junc_start][junc_end]))
-                    except StatisticsError:
-                        median_reads = 0
-                    except KeyError:
-                        median_reads = 0
-
-                    try:
-                        junc_reads[combined_name][junc_start][junc_end] = median_reads
-                    except KeyError:
-                        junc_reads[combined_name][junc_start] = {junc_end: median_reads}
-
+                try:
+                    junc_reads[exp_name][junc_start][junc_end] = 0
+                except KeyError:
+                    junc_reads[exp_name][junc_start] = {junc_end: 0}
             for ir in all_ir:
                 ir_start, ir_end = itemgetter('start', 'end')(ir)
+                try:
+                    ir_reads[exp_name][ir_start][ir_end] = 0
+                except KeyError:
+                    ir_reads[exp_name][ir_start] = {ir_end: 0}
 
-                for exp_name in experiment_names:
+        else:
+            all_junc_reads = self.junction_reads_exp_opt(gene_id)
+            all_ir_reads = self.intron_retention_reads_exp_opt(gene_id)
+            for experiment_names in experiment_names_list:
+                combined_name = next((n for n in experiment_names if ' Combined' in n), '')
+                experiment_names = [e for e in experiment_names if e != combined_name]
 
-                    try:
-                        reads = all_ir_reads[(exp_name, ir_start, ir_end)]
-                    except:
-                        continue
+                for name in experiment_names:
+                    junc_reads[name] = {}
+                    ir_reads[name] = {}
+                    if combined_name:
+                        junc_reads[combined_name] = {}
+                        ir_reads[combined_name] = {}
 
 
-                    try:
-                        ir_reads[exp_name][ir_start][ir_end] = reads
-                        if combined_name:
-                            combined_ir_reads[ir_start][ir_end].append(reads)
-                    except KeyError:
-                        ir_reads[exp_name][ir_start] = {ir_end: reads}
-                        if combined_name:
-                            combined_ir_reads[ir_start] = {ir_end: [reads]}
+                for junc in all_junctions:
+                    junc_start, junc_end = itemgetter('start', 'end')(junc)
 
-                if combined_name:
+                    for exp_name in experiment_names:
 
-                    try:
-                        median_reads = ceil(median(combined_ir_reads[ir_start][ir_end]))
-                    except StatisticsError:
-                        median_reads = 0
-                    except KeyError:
-                        median_reads = 0
+                        try:
+                            reads = all_junc_reads[(exp_name, junc_start, junc_end)]
+                        except:
+                            continue
 
-                    try:
-                        ir_reads[combined_name][ir_start][ir_end] = median_reads
-                    except KeyError:
-                        ir_reads[combined_name][ir_start] = {ir_end: median_reads}
+                        try:
+                            junc_reads[exp_name][junc_start][junc_end] = reads
+                            if combined_name:
+                                combined_junc_reads[junc_start][junc_end].append(reads)
+                        except KeyError:
+                            junc_reads[exp_name][junc_start] = {junc_end: reads}
+                            if combined_name:
+                                combined_junc_reads[junc_start] = {junc_end: [reads]}
+
+                    if combined_name:
+
+                        try:
+                            median_reads = ceil(median(combined_junc_reads[junc_start][junc_end]))
+                        except StatisticsError:
+                            median_reads = 0
+                        except KeyError:
+                            median_reads = 0
+
+                        try:
+                            junc_reads[combined_name][junc_start][junc_end] = median_reads
+                        except KeyError:
+                            junc_reads[combined_name][junc_start] = {junc_end: median_reads}
+
+                for ir in all_ir:
+                    ir_start, ir_end = itemgetter('start', 'end')(ir)
+
+                    for exp_name in experiment_names:
+
+                        try:
+                            reads = all_ir_reads[(exp_name, ir_start, ir_end)]
+                        except:
+                            continue
+
+
+                        try:
+                            ir_reads[exp_name][ir_start][ir_end] = reads
+                            if combined_name:
+                                combined_ir_reads[ir_start][ir_end].append(reads)
+                        except KeyError:
+                            ir_reads[exp_name][ir_start] = {ir_end: reads}
+                            if combined_name:
+                                combined_ir_reads[ir_start] = {ir_end: [reads]}
+
+                    if combined_name:
+
+                        try:
+                            median_reads = ceil(median(combined_ir_reads[ir_start][ir_end]))
+                        except StatisticsError:
+                            median_reads = 0
+                        except KeyError:
+                            median_reads = 0
+
+                        try:
+                            ir_reads[combined_name][ir_start][ir_end] = median_reads
+                        except KeyError:
+                            ir_reads[combined_name][ir_start] = {ir_end: median_reads}
 
         gene_dict = dict(self.view_gene(gene_id))
         gene_dict['exons'] = tuple(dict(e) for e in self.view_exons(gene_id))

@@ -63,18 +63,12 @@ def splice_graph(gene_id):
     with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
 
         exp_names = [sg.experiment_names]
-        if ViewConfig().combined_reads_only:
-            exp_names = [["splice graph Combined"] + list(sg.experiment_names)]
-            gd, exp_names = sg.gene_experiment_combined_only(gene_id, exp_names)
+        if ViewConfig().disable_reads:
+            gd = sg.gene_experiment(gene_id, [])
+            exp_names = [['splice graph']]
         else:
-
             gd = sg.gene_experiment(gene_id, exp_names)
 
-        #[['het_cer Combined'], ['het_adr Combined'], ['het_adr2 Combined']]
-        #['het_cer', 'het_adr', 'het_adr2']
-
-
-        print(gd)
         gd['experiment_names'] = exp_names
         gd['group_names'] = ['splice graph']
         return jsonify(gd)
@@ -86,8 +80,8 @@ def psi_splice_graphs():
         try:
             sg_init = session['psi_init_splice_graphs']
         except KeyError:
-            if ViewConfig().combined_reads_only:
-                sg_init = [['splice graph Combined', 'splice graph Combined']]
+            if ViewConfig().disable_reads:
+                sg_init = [['splice graph', 'splice graph']]
             else:
                 sg_init = [['splice graph', sg.experiment_names[0]]]
 

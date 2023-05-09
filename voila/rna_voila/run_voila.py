@@ -164,7 +164,7 @@ view_parser.add_argument('--ignore-inconsistent-group-errors', action='store_tru
                               "but different experiments are analyzed")
 view_parser.add_argument('--splice-graph-only', action='store_true', help=argparse.SUPPRESS)
 view_parser.add_argument('--enable-het-comparison-chooser', action='store_true', help=argparse.SUPPRESS)
-view_parser.add_argument('--combined-reads-only', action='store_true', help=argparse.SUPPRESS)
+view_parser.add_argument('--disable-reads', action='store_true', help=argparse.SUPPRESS)
 
 
 
