@@ -290,6 +290,29 @@ class Junctions(SpliceGraphSQL):
             res[(expname, start, end)] = reads
         return res
 
+    def junction_reads_sums(self, gene_id, groups):
+        """
+        Efficient selection for only combined groups of experiments
+        Groups should be an dict where each item is the list of experiments in that group
+        """
+
+        res = {}
+        for group, exps in groups.items():
+            res[group] = {}
+            exps_q = ','.join("'" + e + "'" for e in exps)
+
+            q_s = f'''
+                WITH a as (select * from junction_reads 
+                where junction_gene_id = ? and experiment_name in ({exps_q}) 
+                )
+                select sum(reads), junction_start, junction_end from a group by junction_start, junction_end
+                '''
+            query = self.conn.execute(q_s, (gene_id,))
+
+            for reads, start, end in query:
+                res[group][(start, end)] = reads
+        return res
+
 
 class IntronRetentions(SpliceGraphSQL):
     def intron_retentions(self, gene_id, omit_simplified=False):
@@ -348,6 +371,29 @@ class IntronRetentions(SpliceGraphSQL):
 
         for reads, expname, start, end in query:
             res[(expname, start, end)] = reads
+        return res
+
+    def intron_retention_reads_sums(self, gene_id, groups):
+        """
+        Efficient selection for only combined groups of experiments
+        Groups should be an dict where each item is the list of experiments in that group
+        """
+
+        res = {}
+        for group, exps in groups.items():
+            res[group] = {}
+            exps_q = ','.join("'" + e + "'" for e in exps)
+
+            q_s = f'''
+                WITH a as (select * from intron_retention_reads 
+                where intron_retention_gene_id = ? and experiment_name in ({exps_q}) 
+                )
+                select sum(reads), intron_retention_start, intron_retention_end from a group by intron_retention_start, intron_retention_end
+                '''
+            query = self.conn.execute(q_s, (gene_id,))
+
+            for reads, start, end in query:
+                res[group][(start, end)] = reads
         return res
 
 

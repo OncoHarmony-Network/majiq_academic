@@ -9,6 +9,7 @@ from rna_voila.index import Index
 from rna_voila.view import views
 from rna_voila.view.datatables import DataTables
 from rna_voila.view.forms import LsvFiltersForm, DeltaPsiFiltersForm
+from rna_voila.config import ViewConfig
 
 app, bp = views.get_bp(__name__)
 
@@ -135,7 +136,10 @@ def nav(gene_id):
 def splice_graph(gene_id):
     with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewDeltaPsi() as v:
         exp_names = v.splice_graph_experiment_names
-        gd = sg.gene_experiment(gene_id, exp_names)
+        if ViewConfig().combined_reads_only:
+            gd, exp_names = sg.gene_experiment_combined_only(gene_id, exp_names)
+        else:
+            gd = sg.gene_experiment(gene_id, exp_names)
         gd['group_names'] = v.group_names
         gd['experiment_names'] = exp_names
         return jsonify(gd)

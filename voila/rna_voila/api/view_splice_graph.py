@@ -514,3 +514,67 @@ class ViewSpliceGraph(SpliceGraph):
         gene_dict['alt_ends'] = tuple(list(a.values())[0] for a in self.alt_ends(gene_id))
 
         return gene_dict
+
+    def gene_experiment_combined_only(self, gene_id, experiment_names_list):
+        """
+        Get data to populate javascript splice graph.
+        :param gene_id: gene id
+        :param experiment_names_list: experiment names
+        :return: dictionary
+        """
+
+        junc_reads = {}
+        ir_reads = {}
+        combined_junc_reads = {}
+        combined_ir_reads = {}
+        all_junctions = list(self.junctions(gene_id, omit_simplified=self.omit_simplified))
+        all_ir = list(self.intron_retentions(gene_id, omit_simplified=self.omit_simplified))
+
+
+        exp_names = []
+        groups = {}
+        for experiment_names in experiment_names_list:
+            combined_name = next((n for n in experiment_names if ' Combined' in n), '')
+            if not combined_name:
+                continue
+            exp_names.append([combined_name])
+            groups[combined_name] = [e for e in experiment_names if e != combined_name]
+
+        all_junc_reads = self.junction_reads_sums(gene_id, groups)
+        all_ir_reads = self.intron_retention_reads_sums(gene_id, groups)
+
+        for combined_name in groups.keys():
+            junc_reads[combined_name] = {}
+            ir_reads[combined_name] = {}
+
+
+            for junc in all_junctions:
+                junc_start, junc_end = itemgetter('start', 'end')(junc)
+                median_reads = all_junc_reads[combined_name].get((junc_start, junc_end), 0)
+                try:
+                    junc_reads[combined_name][junc_start][junc_end] = median_reads
+                except KeyError:
+                    junc_reads[combined_name][junc_start] = {junc_end: median_reads}
+
+
+            for ir in all_ir:
+                ir_start, ir_end = itemgetter('start', 'end')(ir)
+                median_reads = all_ir_reads[combined_name].get((ir_start, ir_end), 0)
+                try:
+                    ir_reads[combined_name][ir_start][ir_end] = median_reads
+                except KeyError:
+                    ir_reads[combined_name][ir_start] = {ir_end: median_reads}
+
+
+
+        gene_dict = dict(self.view_gene(gene_id))
+        gene_dict['exons'] = tuple(dict(e) for e in self.view_exons(gene_id))
+        gene_dict['junctions'] = tuple(dict(j) for j in self.view_junctions(gene_id))
+        gene_dict['intron_retention'] = tuple(dict(ir) for ir in self.view_intron_retentions(gene_id))
+        gene_dict['junction_reads'] = junc_reads
+        gene_dict['intron_retention_reads'] = ir_reads
+        gene_dict['genome'] = self.genome
+        gene_dict['alt_starts'] = tuple(list(a.values())[0] for a in self.alt_starts(gene_id))
+        gene_dict['alt_ends'] = tuple(list(a.values())[0] for a in self.alt_ends(gene_id))
+
+        return gene_dict, exp_names

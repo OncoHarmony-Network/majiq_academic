@@ -146,7 +146,10 @@ def nav(gene_id):
 def splice_graph(gene_id):
     with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewPsis() as v:
         exp_names = v.splice_graph_experiment_names
-        gd = sg.gene_experiment(gene_id, exp_names)
+        if ViewConfig().combined_reads_only:
+            gd, exp_names = sg.gene_experiment_combined_only(gene_id, exp_names)
+        else:
+            gd = sg.gene_experiment(gene_id, exp_names)
         gd['experiment_names'] = exp_names
         gd['group_names'] = v.group_names
         return jsonify(gd)
