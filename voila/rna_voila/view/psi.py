@@ -146,9 +146,16 @@ def nav(gene_id):
 def splice_graph(gene_id):
     with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewPsis() as v:
         exp_names = v.splice_graph_experiment_names
-        gd = sg.gene_experiment(gene_id, exp_names)
+        if ViewConfig().disable_reads:
+            gd = sg.gene_experiment(gene_id, [])
+            exp_names = [['splice graph']]
+            gd['group_names'] = ["splice graph"]
+        else:
+            gd = sg.gene_experiment(gene_id, exp_names)
+            gd['group_names'] = v.group_names
+
         gd['experiment_names'] = exp_names
-        gd['group_names'] = v.group_names
+
         return jsonify(gd)
 
 
@@ -199,7 +206,10 @@ def psi_splice_graphs():
         try:
             sg_init = session['psi_init_splice_graphs']
         except KeyError:
-            sg_init = [[v.group_names[0], v.splice_graph_experiment_names[0][0]]]
+            if ViewConfig().disable_reads:
+                sg_init = [["splice graph", "splice graph"]]
+            else:
+                sg_init = [[v.group_names[0], v.splice_graph_experiment_names[0][0]]]
 
         json_data = request.get_json()
 
