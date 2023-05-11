@@ -207,23 +207,28 @@ class Violin {
         this.violin_pad = 5;
         this.violin_label_tilt = 0;
         this.top_padding = 5;
+        this.top_labels_padding = 0;
         this.x_axis_shift = 0;
         this.psi_label_offset_x = 0;
         this.psi_label_offset_y = 0;
         this.psi_label_tilt = 0;
         this.right_padding = 0;
+        this.max_label_length = 20;
+        this.height_offset = 0;
 
 
         if(violin_data.group_names.length * (this.violin_width + this.violin_pad) > window.innerWidth * 0.7){
             this.violin_width = ((window.innerWidth * 0.7) / violin_data.group_names.length) - this.violin_pad;
             this.violin_label_tilt = 30;
-            this.top_padding = 7.5 * Math.sin(this.violin_label_tilt * Math.PI / 180) * max_strlen_from_arr(violin_data.group_names);
-            this.right_padding = 7.5 * Math.cos(this.violin_label_tilt * Math.PI / 180) * max_strlen_from_arr(violin_data.group_names);
+            this.top_labels_padding = 7.5 * Math.sin(this.violin_label_tilt * Math.PI / 180) * Math.min(this.max_label_length, max_strlen_from_arr(violin_data.group_names));
+            this.right_padding = 7.5 * Math.cos(this.violin_label_tilt * Math.PI / 180) * Math.min(this.max_label_length, max_strlen_from_arr(violin_data.group_names));
             //this.x_axis_shift = -1 * this.violin_width;
             if(true){
                 this.psi_label_tilt = 90;
-                this.psi_label_offset_x = 3;
-                this.psi_label_offset_y = -10;
+                this.psi_label_offset_x = -11;
+                this.psi_label_offset_y = 18;
+                this.top_padding = 14;
+                this.height_offset = 56;
             }
         }
 
@@ -235,7 +240,7 @@ class Violin {
     };
 
     get svg_height() {
-        return this.violin_height + this.x_axis_height + this.top_padding
+        return this.violin_height + this.x_axis_height + this.height_offset;
     }
 
     get svg_width() {
@@ -289,13 +294,13 @@ class Violin {
 
 
         if(junc_idx === 0)
-            svg.setAttribute('height', this.svg_height + 10);
+            svg.setAttribute('height', this.svg_height + 10 + this.top_padding + this.top_labels_padding );
 
         const g = d3.select(svg)
                 .append('g');
 
         if(junc_idx === 0)
-            g.attr('transform', `translate(${this.y_axis_width}, ${this.top_padding+10})`);
+            g.attr('transform', `translate(${this.y_axis_width}, ${10 + this.top_padding + this.top_labels_padding })`);
         else
             g.attr('transform', `translate(${this.y_axis_width}, ${this.top_padding})`);
 
@@ -749,10 +754,9 @@ class Violin {
             .text(d => {
                 try {
                     return parseFloat(d.toPrecision(3))
-                } catch (TypeError) {
-                    const max_length = 20;
-                    if (d.length > max_length) {
-                        d = d.slice(0, max_length - 3) + '...'
+                } catch (TypeError) {                    
+                    if (d.length > this.max_label_length) {
+                        d = d.slice(0, this.max_label_length - 3) + '...'
                     }
                     return d
                 }
@@ -806,7 +810,7 @@ class Violin {
             }
 
             chain = chain
-            .attr('y', this.svg_height - this.x_axis_height + 6)
+            .attr('y', this.svg_height - this.x_axis_height + 6 - this.top_padding - this.height_offset)
             .append('text')
             .attr('font-size', 12)
             .attr('textLength', d =>{
@@ -817,11 +821,10 @@ class Violin {
             .attr('lengthAdjust', "spacingAndGlyphs")
             .text(d => {
                 try {
-                    return parseFloat(d.toPrecision(3))
+                    return d.toPrecision(3)
                 } catch (TypeError) {
-                    const max_length = 20;
-                    if (d.length > max_length) {
-                        d = d.slice(0, max_length - 3) + '...'
+                    if (d.length > this.max_label_length) {
+                        d = d.slice(0, this.max_label_length - 3) + '...'
                     }
                     return d
                 }
@@ -842,7 +845,7 @@ class Violin {
                     el.setAttribute('x', x);
                     el.setAttribute("data-x", x);
                     el.setAttribute("data-orig-x", x);
-                    el.setAttribute('y', this.svg_height - this.x_axis_height + 10 + this.psi_label_offset_y);
+                    el.setAttribute('y', this.svg_height - this.x_axis_height + 10 + this.psi_label_offset_y - this.top_padding - this.height_offset);
                     el.setAttribute('text-anchor', 'middle');
                     el.setAttribute('transform', `rotate(${this.psi_label_tilt},${parseFloat(a[i].getAttribute('x')) + this.psi_label_offset_x},${parseFloat(a[i].getAttribute('y')) + this.psi_label_offset_y})`);
                 //                }
