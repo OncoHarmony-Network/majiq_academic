@@ -192,16 +192,46 @@ function draw_pairwise_plot(main_svg){
         $(main_svg.node()).children('g').attr('transform', `translate(40, ${5 + max_y})`);
     }
 
+function max_strlen_from_arr(arr){
+    let maxtrlen = 0;
+    for(let s of arr){
+        maxtrlen = Math.max(maxtrlen, s.length);
+    }
+    return maxtrlen;
+}
+
 class Violin {
     constructor(violin_data) {
         this.data = violin_data;
         this.violin_width = 75;
         this.violin_pad = 5;
+        this.violin_label_tilt = 0;
+        this.top_padding = 5;
+        this.x_axis_shift = 0;
+        this.psi_label_offset_x = 0;
+        this.psi_label_offset_y = 0;
+        this.psi_label_tilt = 0;
+        this.right_padding = 0;
+
+
+        if(violin_data.group_names.length * (this.violin_width + this.violin_pad) > window.innerWidth * 0.7){
+            this.violin_width = ((window.innerWidth * 0.7) / violin_data.group_names.length) - this.violin_pad;
+            this.violin_label_tilt = 30;
+            this.top_padding = 7.5 * Math.sin(this.violin_label_tilt * Math.PI / 180) * max_strlen_from_arr(violin_data.group_names);
+            this.right_padding = 7.5 * Math.cos(this.violin_label_tilt * Math.PI / 180) * max_strlen_from_arr(violin_data.group_names);
+            //this.x_axis_shift = -1 * this.violin_width;
+            if(true){
+                this.psi_label_tilt = 90;
+                this.psi_label_offset_x = 3;
+                this.psi_label_offset_y = -10;
+            }
+        }
+
         this.violin_height = 135;
         // this.x_axis_height = 125;
         this.x_axis_height = 20;
         this.y_axis_width = 40;
-        this.top_padding = 5;
+
     };
 
     get svg_height() {
@@ -209,7 +239,7 @@ class Violin {
     }
 
     get svg_width() {
-        return this.y_axis_width + this.violin_count * (this.violin_width + this.violin_pad)
+        return this.y_axis_width + this.violin_count * (this.violin_width + this.violin_pad) + this.right_padding;
     }
 
     psi(svg) {
@@ -709,7 +739,7 @@ class Violin {
         svg
             .append('g')
             .attr('class', 'x-axis')
-            .attr('transform', 'translate(0, -5)')
+            .attr('transform', `translate(${this.x_axis_shift}, -5)`)
             .selectAll('text')
             .data(x_axis_data)
             .enter()
@@ -729,12 +759,12 @@ class Violin {
             })
             .each((d, i, a) => {
                 const el = a[i];
-                if (d.length > 20) {
+                if (this.violin_label_tilt !== 0) {
                     el.setAttribute('x', (this.violin_width + this.violin_pad) * (i + .45));
                     el.setAttribute("data-x", (this.violin_width + this.violin_pad) * (i + .45));
                     el.setAttribute("data-orig-x", (this.violin_width + this.violin_pad) * (i + .45));
                     el.setAttribute('y', 0);
-                    el.setAttribute('transform', `rotate(90,${a[i].getAttribute('x')},${a[i].getAttribute('y')})`);
+                    el.setAttribute('transform', `rotate(${-this.violin_label_tilt},${a[i].getAttribute('x')},${a[i].getAttribute('y')})`);
                     el.setAttribute('text-anchor', 'left');
 
                 } else {
@@ -808,11 +838,13 @@ class Violin {
                 //     el.setAttribute('text-anchor', 'left');
                 //
                 // } else {
-                    el.setAttribute('x', (this.violin_width + this.violin_pad) * (i + .5));
-                    el.setAttribute("data-x", (this.violin_width + this.violin_pad) * (i + .5));
-                    el.setAttribute("data-orig-x", (this.violin_width + this.violin_pad) * (i + .5));
-                    el.setAttribute('y', this.svg_height - this.x_axis_height + 10);
+                let x = (this.violin_width + this.violin_pad) * (i + .5) + this.psi_label_offset_x;
+                    el.setAttribute('x', x);
+                    el.setAttribute("data-x", x);
+                    el.setAttribute("data-orig-x", x);
+                    el.setAttribute('y', this.svg_height - this.x_axis_height + 10 + this.psi_label_offset_y);
                     el.setAttribute('text-anchor', 'middle');
+                    el.setAttribute('transform', `rotate(${this.psi_label_tilt},${parseFloat(a[i].getAttribute('x')) + this.psi_label_offset_x},${parseFloat(a[i].getAttribute('y')) + this.psi_label_offset_y})`);
                 //                }
                 el.setAttribute('textLength', '40px')
                 el.setAttribute('data-group-idx', i)
