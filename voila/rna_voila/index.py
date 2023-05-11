@@ -113,7 +113,7 @@ class Index:
 
         voila_files = ViewConfig().voila_files
 
-        with MatrixHdf5(voila_file, 'w') as m:
+        with MatrixHdf5(voila_file, 'a') as m:
             hashval = Index._get_files_hash(voila_files)
             m.write_index(voila_index, hashval)
 
