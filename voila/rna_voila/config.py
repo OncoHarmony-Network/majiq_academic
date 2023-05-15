@@ -16,7 +16,7 @@ _ViewConfig = namedtuple('ViewConfig', ['voila_file', 'voila_files', 'splice_gra
                                         'force_index', 'port', 'host', 'web_server', 'index_file',
                                         'num_web_workers', 'strict_indexing', 'skip_type_indexing', 'splice_graph_only',
                                         'enable_passcode', 'ignore_inconsistent_group_errors',
-                                        'enable_het_comparison_chooser', 'disable_reads'] + global_fields)
+                                        'enable_het_comparison_chooser', 'disable_reads', 'group_order_override'] + global_fields)
 _ViewConfig.__new__.__defaults__ = (None,) * len(_ViewConfig._fields)
 _TsvConfig = namedtuple('TsvConfig', ['file_name', 'voila_files', 'voila_file', 'splice_graph_file',
                                       'non_changing_threshold', 'threshold', 'analysis_type', 'show_all',
@@ -104,7 +104,7 @@ def find_splice_graph_file(vs):
     return sg_file.resolve()
 
 
-def find_voila_files(vs):
+def find_voila_files(vs, group_order_override=None):
     """
     Find all voila files in files and directories.
     :param vs: list of files and directories.
@@ -112,6 +112,7 @@ def find_voila_files(vs):
     """
 
     voila_files = []
+    voila_files_to_group_names = {}
 
     for v in vs:
         v = Path(v)
@@ -119,21 +120,34 @@ def find_voila_files(vs):
         if v.is_file() and v.name.endswith('.voila'):
 
             try:
-                with Matrix(v, pre_config=True):
+                with Matrix(v, pre_config=True) as m:
                     voila_files.append(v)
+                    if group_order_override:
+                        voila_files_to_group_names[v] = m.group_names[0]
             except OSError:
                 voila_log().warning('Error opening voila file %s , skipping this file' % str(v))
                 pass
 
         elif v.is_dir():
-            x = find_voila_files(v.iterdir())
+            x, x2 = find_voila_files(v.iterdir(), group_order_override)
             voila_files = [*voila_files, *x]
+            voila_files_to_group_names.update(x2)
+
+
 
     # We rely on the directory of voila files to store the index for het runs, therefore it would be best to
     # have the same directory every time.
     voila_files.sort()
 
-    return voila_files
+    return voila_files, voila_files_to_group_names
+
+def reorder_voila_files(voila_files, group_order_override, voila_files_to_group_names):
+    try:
+        return sorted(voila_files, key=lambda x: group_order_override.index(voila_files_to_group_names[x]))
+    except ValueError:
+        voila_log().critical("Could not match group order override to provided voila files")
+        raise
+
 
 def get_mixed_analysis_type_str(voila_files):
     types = {'psi': 0, 'delta_psi': 0, 'het': 0}
@@ -211,7 +225,11 @@ def write(args):
 
     else:
 
-        voila_files = find_voila_files(args.files)
+
+        group_order_override = args.group_order_override
+        voila_files, voila_files_to_group_names = find_voila_files(args.files, group_order_override=group_order_override)
+        if group_order_override:
+            voila_files = reorder_voila_files(voila_files, group_order_override, voila_files_to_group_names)
         if args.func.__name__ in ("Filter", "Classify", 'splitter', 'recombine'):
             analysis_type = get_mixed_analysis_type_str(voila_files)
         else:
@@ -405,7 +423,7 @@ class ClassifyConfig:
             for bool_key in ['debug', 'keep_no_lsvs_modules', 'only_binary', 'untrimmed_exons', 'overwrite',
                              'putative_multi_gene_regions', 'show_all', 'keep_no_lsvs_junctions', 'output_mpe',
                              'ignore_inconsistent_group_errors', 'disable_metadata', 'show_read_counts',
-                             'cassettes_constitutive_column', 'include_change_cases', 'junc_gene_dist_column'
+                             'cassettes_constitutive_column', 'include_change_cases', 'junc_gene_dist_column',
                              'memory_map_hdf5']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
