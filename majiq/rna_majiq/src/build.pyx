@@ -559,12 +559,15 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
     cdef vector[string] cjuncs
     cdef bint enable_anot_ir = conf.annot_ir_always
 
+    init_splicegraph(sg_filename, conf)
+    open_db(sg_filename, &db)
+
     logger.info("Parsing GFF3")
-    majiq_io.read_gff(transcripts, gene_map, gid_vec, bsimpl, enable_anot_ir, logger)
+    majiq_io.read_gff(transcripts, gene_map, gid_vec, bsimpl, enable_anot_ir, logger, db)
 
     prepare_genelist(gene_map, gene_list)
     n = gene_map.size()
-    init_splicegraph(sg_filename, conf)
+
     logger.info("Reading bamfiles")
     _find_junctions(file_list, gene_map, gid_vec, gene_list, conf, logger)
 
@@ -575,7 +578,7 @@ cdef _core_build(str transcripts, list file_list, object conf, object logger):
     if conf.juncfiles_only:
         return
     logger.info("Detecting LSVs ngenes: %s " % n)
-    open_db(sg_filename, &db)
+
 
     for i in prange(n, nogil=True, num_threads=nthreads):
         gg = gene_map[gid_vec[i]]

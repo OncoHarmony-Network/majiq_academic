@@ -160,67 +160,72 @@
         });
 
         json_ajax('{{ url_for("main.splice_graph", gene_id=gene.id) }}').then(gene => {
-            const sgs = new SpliceGraphs('.splice-graph-container', {
-                gene: gene,
-                remove_img: '{{ url_for('static', filename='img/remove.svg')}}',
-                remove_fn: event => {
-                    const sg = event.target.closest('.splice-graph');
-                    send_ajax('{{ url_for('main.psi_splice_graphs') }}', {'remove': [sg.dataset.group, sg.dataset.experiment]})
-                        .then(() => {
-                            sg.remove();
-                            SpliceGraphTools._populate_sg_form();
+            json_ajax('{{ url_for("main.transcripts", gene_id=gene.id) }}').then(transcripts => {
+                const sgs = new SpliceGraphs('.splice-graph-container', {
+                    gene: gene,
+                    transcripts: transcripts,
+                    remove_img: '{{ url_for('static', filename='img/remove.svg')}}',
+                    remove_fn: event => {
+                        const sg = event.target.closest('.splice-graph');
+                        send_ajax('{{ url_for('main.psi_splice_graphs') }}', {'remove': [sg.dataset.group, sg.dataset.experiment]})
+                            .then(() => {
+                                sg.remove();
+                                SpliceGraphTools._populate_sg_form();
+                            });
+                    },
+                    download_img: '{{ url_for('static', filename='img/download.svg')}}'
+                });
+
+                const highlight_lsvs = () => {
+                    const hl_data = Array.from(document.querySelectorAll('.highlight-form'))
+                        .map(f => {
+                            const lsv_id = f.closest('.lsv').dataset.lsvId;
+                            const highlight = f.querySelector('.highlight').checked;
+                            const weighted = f.querySelector('.psi-weighted').checked;
+                            return [lsv_id, highlight, weighted];
                         });
-                },
-                download_img: '{{ url_for('static', filename='img/download.svg')}}'
-            });
 
-            const highlight_lsvs = () => {
-                const hl_data = Array.from(document.querySelectorAll('.highlight-form'))
-                    .map(f => {
-                        const lsv_id = f.closest('.lsv').dataset.lsvId;
-                        const highlight = f.querySelector('.highlight').checked;
-                        const weighted = f.querySelector('.psi-weighted').checked;
-                        return [lsv_id, highlight, weighted];
-                    });
+                    send_ajax('{{ url_for("main.lsv_highlight") }}', hl_data).then(lsvs => {
+                        sgs.highlight(lsvs);
+                    })
 
-                send_ajax('{{ url_for("main.lsv_highlight") }}', hl_data).then(lsvs => {
-                    sgs.highlight(lsvs);
-                })
+                };
 
-            };
+                sgs.init_create().then(s => {
+                    new SpliceGraphTools(s, gene, highlight_lsvs);
+                    sgs.create_transcripts();
+                });
+                const plotOpts = new PlotOptions(gene);
 
-            sgs.init_create().then(s => new SpliceGraphTools(s, gene, highlight_lsvs));
-            const plotOpts = new PlotOptions(gene);
-
-            document.querySelectorAll('.highlight-form')
-                .forEach(h => h.addEventListener('change', (event) => {
-                    const input = event.target;
-                    if (input.classList.contains('psi-weighted') && input.checked) {
-                        input
-                            .closest('.highlight-form')
-                            .querySelectorAll('.highlight')
-                            .forEach(hl => hl.checked = true)
-                    }
-
-                    highlight_lsvs();
-                }));
-
-            $('.lsv-table tbody').on('mouseenter', 'tr', function(){
-                const hl_data = [[$(this).closest('.lsv-table').data('lsv-id'), true, false]];
-                const junc_coords = $(this).children().eq(0).text().split('-').map(function (x){return parseInt(x, 10)});
-                send_ajax('{{ url_for("main.lsv_highlight") }}', hl_data).then(lsvs => {
-                    $.each(lsvs, function(i, v){
-                        lsvs[i]['junctions'] = lsvs[i]['junctions'].filter(function(junc){return junc[0] === junc_coords[0] && junc[1] === junc_coords[1]});
-                        if (!(lsvs[i]['intron_retention'][0] === junc_coords[0] && lsvs[i]['intron_retention'][1] === junc_coords[1])){
-                            lsvs[i]['intron_retention'] = [];
+                document.querySelectorAll('.highlight-form')
+                    .forEach(h => h.addEventListener('change', (event) => {
+                        const input = event.target;
+                        if (input.classList.contains('psi-weighted') && input.checked) {
+                            input
+                                .closest('.highlight-form')
+                                .querySelectorAll('.highlight')
+                                .forEach(hl => hl.checked = true)
                         }
-                    });
-                    sgs.highlight(lsvs);
-                })
-            }).on('mouseleave', 'tr', function(){
-                highlight_lsvs();
-            });
 
+                        highlight_lsvs();
+                    }));
+
+                $('.lsv-table tbody').on('mouseenter', 'tr', function(){
+                    const hl_data = [[$(this).closest('.lsv-table').data('lsv-id'), true, false]];
+                    const junc_coords = $(this).children().eq(0).text().split('-').map(function (x){return parseInt(x, 10)});
+                    send_ajax('{{ url_for("main.lsv_highlight") }}', hl_data).then(lsvs => {
+                        $.each(lsvs, function(i, v){
+                            lsvs[i]['junctions'] = lsvs[i]['junctions'].filter(function(junc){return junc[0] === junc_coords[0] && junc[1] === junc_coords[1]});
+                            if (!(lsvs[i]['intron_retention'][0] === junc_coords[0] && lsvs[i]['intron_retention'][1] === junc_coords[1])){
+                                lsvs[i]['intron_retention'] = [];
+                            }
+                        });
+                        sgs.highlight(lsvs);
+                    })
+                }).on('mouseleave', 'tr', function(){
+                    highlight_lsvs();
+                });
+            });
         });
 
         document.querySelectorAll('.lsv-cartoon').forEach(async function (c) {

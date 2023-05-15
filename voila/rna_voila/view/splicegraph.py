@@ -73,6 +73,10 @@ def splice_graph(gene_id):
         gd['group_names'] = ['splice graph']
         return jsonify(gd)
 
+@bp.route('/transcripts/<gene_id>', methods=('POST', 'GET'))
+def transcripts(gene_id):
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
+        return jsonify(sg.gene_transcript_exons(gene_id))
 
 @bp.route('/psi-splice-graphs', methods=('POST',))
 def psi_splice_graphs():

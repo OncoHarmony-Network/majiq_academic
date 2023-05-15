@@ -29,6 +29,9 @@ cdef:
     char *exon_insert = "INSERT INTO exon " \
                         "(gene_id,start,end,annotated_start,annotated_end,annotated) " \
                         "VALUES ('%s',%d,%d,%d,%d,%d);"
+    char *transcript_exon_insert = "INSERT INTO transcript_exon " \
+                        "(gene_id,transcript_id,start,end) " \
+                        "VALUES ('%s','%s',%d,%d);"
     char *junc_insert = "INSERT INTO junction " \
                         "(gene_id,start,end,has_reads,annotated,is_simplified,is_constitutive,has_flag) " \
                         "VALUES ('%s',%d,%d,0,%d,%d,%d,%d);"
@@ -174,6 +177,25 @@ cdef int exon(sqlite3 *db, string gene_id, int start, int end, int annotated_sta
     rc = exec_db(db, sql)
     free(sql)
     return rc
+
+cdef int transcript_exon(sqlite3 *db, string gene_id, string transcript_id, int start, int end) nogil:
+
+    cdef:
+        int rc
+        int arg_len
+        int rm_chars_len
+        char *sql
+
+    arg_len = gene_id.length() + transcript_id.length() + int_len(start) + int_len(end)
+    rm_chars_len = 4 * 2
+
+    sql = <char *> malloc(sizeof(char) * (strlen(transcript_exon_insert) + arg_len - rm_chars_len + 1))
+    sprintf(sql, transcript_exon_insert, gene_id.c_str(), transcript_id.c_str(), start, end)
+
+    rc = exec_db(db, sql)
+    free(sql)
+    return rc
+
 
 cdef int junction(sqlite3 *db, string gene_id, int start, int end, bint annotated, bint is_simplified, bint is_constitutive, bint has_flag) nogil:
     cdef:

@@ -9,6 +9,7 @@ const copy_text = str => {
 
 class SpliceGraphs {
     constructor(container, opts) {
+
         this.container_selector = container;
         this.remove_img = opts.remove_img;
         this.download_img = opts.download_img;
@@ -19,6 +20,12 @@ class SpliceGraphs {
         this.max_bin = 1;
         this.d = undefined;
         this.lsvs = [];
+        this.transcripts = opts.transcripts;
+        this.transcript_selector = null;
+        this.transcript_sg = null;
+        this.transcript_svg = null;
+        this.transcript_gene = null;
+        this.lr_sg_height = 40;
 
         //constants
         this.junction_height = 25;
@@ -34,6 +41,140 @@ class SpliceGraphs {
         this.container.dataset.zoom = '1';
 
         this.mutation_observer();
+    }
+
+    create_transcripts() {
+        if (Object.keys(this.transcripts).length === 0) return;
+
+        this.transcript_sg = document.createElement('div');
+        this.container.prepend(this.transcript_sg);
+
+        this.transcript_sg.dataset.group = '__annotation__';
+        //sg.dataset.experiment = experiment;
+        this.transcript_sg.classList.add('splice-graph');
+
+        const sg_header = d3.select(this.transcript_sg).append('div').attr('class', 'splice-graph-header');
+
+        sg_header
+            .append('img')
+            .attr('src', this.remove_img)
+            //.attr('class', 'splice-graph-remove')
+            .attr('height', '16px')
+            .style('visibility', 'hidden');
+
+        sg_header
+            .append('img')
+            .attr('class', 'splice-graph-download')
+            .attr('src', this.download_img)
+            .attr('height', '16px');
+
+        sg_header
+            .append('div')
+            .text(`Annotation`);
+
+        this.transcript_selector = sg_header.append("select")
+            .attr("name", "transcript-list");
+
+        const options = this.transcript_selector.selectAll("option")
+            .data(d3.keys(this.transcripts))
+            .enter()
+            .append("option");
+
+        options.text(function(d) {
+            return d;
+        })
+        .attr("value", function(d) {
+            return d;
+        });
+
+        this.transcript_selector.node().onchange = () => {
+            this.render_transcript();
+        }
+        this.render_transcript();
+
+
+    }
+
+    exons_to_junctions(exons){
+        const junctions = [];
+        for(let i=0;i<exons.length-1;i++){
+            junctions.push({
+                'start':exons[i].end,
+                'end':exons[i+1].start,
+                'color': 'red'
+            })
+        }
+        return junctions;
+    }
+
+    render_transcript(){
+
+        if(this.transcript_svg){
+            this.transcript_svg.remove();
+        }
+
+        this.x = this.x_scale(this.gene);
+        //this.junction_bins(sg.dataset.experiment, gene);
+        this.y = this.y_scale(this.lr_sg_height + 10);
+
+        this.transcript_svg = d3.select(this.transcript_sg).append('svg')
+            .attr('width', this.svg_width)
+            .attr('height', this.lr_sg_height)
+            .attr("xmlns", "http://www.w3.org/2000/svg");
+
+        const exons = this.transcripts[this.transcript_selector.node().value];
+
+        const g = this.transcript_svg.append('g')
+            .attr('transform', `translate(0, ${-this.bottom_icons})`);
+
+
+        const exon_grps = g.selectAll('.exon-grp')
+            .data(exons)
+            .enter()
+            .append('g')
+            .attr('class', 'exon-grp');
+
+        exon_grps
+            .append('polygon')
+            .attr('class', 'exon');
+
+        exon_grps
+            .append('text')
+            .attr('class', 'exon-number');
+
+        const junctions = this.exons_to_junctions(exons);
+
+        this.transcript_gene = Object.create(this.gene)
+        this.transcript_gene.junctions = junctions;
+        this.transcript_gene.exons = exons;
+
+        const junc_grps = g.selectAll('.junction-grp')
+            .data(junctions)
+            .enter()
+            .append('g')
+            .attr('class', 'junction-grp');
+
+        junc_grps
+            .append('path')
+            .attr('class', 'junction');
+
+        junc_grps
+            .append('text')
+            .attr('class', 'junction-reads');
+
+        junc_grps
+            .append('line')
+            .attr('class', 'splice-site p3');
+
+        junc_grps
+            .append('line')
+            .attr('class', 'splice-site p5');
+
+        this.transcripts_update(this.transcript_sg, this.transcript_gene, []);
+
+        // if there's a scroll bar, then run update one more time to remove it.
+        if (document.querySelector('.top').scrollWidth > document.querySelector('.top').clientWidth)
+            this.update();
     }
 
     get container() {
@@ -80,8 +221,8 @@ class SpliceGraphs {
         return d3.transition().duration(this.d)
     }
 
-    y_scale() {
-        const height = this.svg_height - 5;
+    y_scale(manual_height) {
+        const height = (manual_height === undefined ? this.svg_height : manual_height) - 5;
         return d3.scaleLinear()
             .domain([0, height])
             .range([height, 0]);
@@ -588,7 +729,7 @@ class SpliceGraphs {
             .attr('font-size', font_size);
     }
 
-    junctions(sg, gene) {
+    junctions(sg, gene, style) {
         const x = this.x;
         const y = this.y;
         const exon_height = this.exon_height;
@@ -601,22 +742,32 @@ class SpliceGraphs {
             .attr('d', d => {
                 const sweep_flag = gene.strand === '+' ? 1 : 0;
                 const junc_length = x(d.end) - x(d.start);
-                return 'M' + [x(d.start), y(exon_height)].join(',') +
-                    'A' + [junc_length / 2, junction_height * d.bin, 0, 0, sweep_flag, x(d.end), y(exon_height)].join(' ')
+                if (style === "spike"){
+                    return 'M' + [x(d.start), y(exon_height)].join(',') +
+                        'L' + [x(d.start) + (junc_length / 2), y(junction_height*1.4 * d.bin)].join(',') +
+                        'L' + [x(d.end), y(exon_height)].join(',');
+                }else if(style === "flat"){
+                    return 'M' + [x(d.start), y(exon_height/2)].join(',') +
+                        'L' + [x(d.end), y(exon_height/2)].join(',');
+                }{
+                    return 'M' + [x(d.start), y(exon_height)].join(',') +
+                        'A' + [junc_length / 2, junction_height * d.bin, 0, 0, sweep_flag, x(d.end), y(exon_height)].join(' ');
+                }
             });
     }
 
     style_junctions(sg, gene, lsvs) {
-
 
         const colors = new Colors();
         const exp = sg.dataset.experiment;
         const grp = sg.dataset.group;
 
         d3.select(sg).selectAll('.junction-grp')
-            .attr('opacity', d => lsvs.length && lsvs
-                .every(lsv => lsv.junctions
-                    .every(junc => !SpliceGraphs.array_equal(junc, [d.start, d.end]))) ? 0.2 : null);
+            .attr('opacity', d => {
+                return lsvs.length && lsvs
+                    .every(lsv => lsv.junctions
+                        .every(junc => !SpliceGraphs.array_equal(junc, [d.start, d.end]))) ? 0.2 : null
+            });
 
         d3.select(sg).selectAll('.junction, .splice-site.p5, .splice-site.p3')
             .attr('stroke-width', d => {
@@ -639,6 +790,8 @@ class SpliceGraphs {
 
             })
             .attr('stroke-dasharray', function (d) {
+                if (grp === "__annotation__") return;
+
                 if (this.classList.contains('splice-site'))
                     return '2,2';
 
@@ -895,12 +1048,32 @@ class SpliceGraphs {
         this.splice_graph_update(sg, gene, []);
     }
 
-    svg(sg) {
+    svg(sg, manual_height) {
         d3.select(sg).select('svg')
             .interrupt()
             .transition(this.t())
             .attr('width', this.svg_width)
-            .attr('height', this.svg_height);
+            .attr('height', manual_height === undefined ? this.svg_height : manual_height);
+    }
+
+    transcripts_update(sg, gene, lsvs){
+        //update some values
+        this.zoom = parseInt(sg.parentNode.dataset.zoom);
+        this.x = this.x_scale(this.gene);
+
+        this.y = this.y_scale(this.lr_sg_height + 10);
+
+        // update splice graph
+        this.svg(sg, this.lr_sg_height);
+        this.exons(sg);
+        this.junctions(sg, gene, 'flat');
+        this.exon_numbers(sg, gene);
+
+
+        // add style to Splice Graph elements
+        this.style_exons(sg, gene, lsvs);
+        this.style_junctions(sg, gene, lsvs);
+
     }
 
     splice_graph_update(sg, gene, lsvs) {
@@ -933,6 +1106,9 @@ class SpliceGraphs {
     }
 
     mutation_observer() {
+
+
+
         window.addEventListener('click', e => {
             const el = e.target.parentNode;
             if (!el.classList.contains('junction-grp') && !el.classList.contains('exon-grp') && !el.classList.contains('intron-retention-grp'))
@@ -1014,7 +1190,13 @@ class SpliceGraphs {
         this.d = duration;
         this.container
             .querySelectorAll('.splice-graph')
-            .forEach(sg => this.splice_graph_update(sg, this.gene, this.lsvs));
+            .forEach(sg => {
+                if (sg.dataset.group == "__annotation__"){
+                    this.transcripts_update(sg, this.transcript_gene, this.lsvs);
+                }else{
+                    this.splice_graph_update(sg, this.gene, this.lsvs);
+                }
+            });
         this.d = undefined;
     }
 

@@ -413,6 +413,11 @@ def copy_lsv(lsv_id):
 def generate_ucsc_link():
     return views._generate_ucsc_link(request.args, ViewPsis)
 
+@bp.route('/transcripts/<gene_id>', methods=('POST', 'GET'))
+def transcripts(gene_id):
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
+        return jsonify(sg.gene_transcript_exons(gene_id))
+
 
 
 app.register_blueprint(bp)
