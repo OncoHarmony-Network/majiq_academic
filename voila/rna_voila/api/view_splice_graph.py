@@ -1,3 +1,4 @@
+import sqlite3
 from operator import itemgetter
 
 from rna_voila.api import SpliceGraph
@@ -605,13 +606,15 @@ class ViewSpliceGraph(SpliceGraph):
         :param gene_id: gene id
         :return: list of exons
         """
-
-        query = self.conn.execute('''
+        try:
+            query = self.conn.execute('''
                                 SELECT gene_id, transcript_id, start, end 
                                 FROM transcript_exon 
                                 WHERE gene_id=?
                                 ORDER BY transcript_id
                                 ''', (gene_id,))
+        except sqlite3.OperationalError:
+            return {}
         transcripts = {}
         cur_id = None
         for row in self._iter_results(query, transcript_exon_fieldnames):
