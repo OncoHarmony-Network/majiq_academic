@@ -151,9 +151,7 @@ class Config(object):
                                 try:
                                     j_file_strandness[prefix] = self._strandness_from_junc_file(juncfile)
                                 except:
-                                    warnings.warn(
-                                        f"Unable to read strand information from {juncfile}, global config will be used"
-                                    )
+                                    pass
                                 break
                     if found:
                         continue
