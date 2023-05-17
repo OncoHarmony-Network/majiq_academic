@@ -292,8 +292,14 @@ def lsv_data(lsv_id):
         exons = sg.exons(gene_id)
         exon_number = views.find_exon_number(exons, ref_exon, strand)
 
-        lr_group_means = {m.group_names[0]: sgl.combined_junctions(gene_id, psi.junctions)}
-        lr_group_bins = {m.group_names[0]: [[0] * 40] * len(psi.junctions)}
+        if sgl.has_lsv(gene_id, lsv_id):
+            lr_lsv = sgl.lsv(gene_id, lsv_id)
+            lr_group_means = {m.group_names[0]: lr_lsv['psi']}
+            lr_group_bins = {m.group_names[0]: lr_lsv['bins']}
+        else:
+            lr_group_means = {m.group_names[0]: [0] * len(psi.junctions)}
+            lr_group_bins = {m.group_names[0]: [[0] * 40] * len(psi.junctions)}
+
 
         return jsonify([
             {

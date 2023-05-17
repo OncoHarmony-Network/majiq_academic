@@ -171,7 +171,7 @@ for gene_id in tqdm(all_gene_ids):
 
     # if prog_i % 100 == 0:
     #     print(prog_i, len(all_gene_ids), gene_id)
-    all_genes[gene_id] = []
+    all_genes[gene_id] = {'transcripts': [], 'lsvs': {}}
 
 
 
@@ -250,7 +250,7 @@ for gene_id in tqdm(all_gene_ids):
                 out_t[key].reverse()
         #print(out_t)
 
-        all_genes[gene_id].append(out_t)
+        all_genes[gene_id]['transcripts'].append(out_t)
         # import pprint
         # pprint.pprint(out_t)
         # break

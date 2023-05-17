@@ -40,13 +40,18 @@ class SpliceGraphLR:
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
+    def _get_transcripts(self, gene_id):
+        if gene_id in self.lrdb:
+            return self.lrdb[gene_id]['transcripts']
+        return []
+
     def gene(self, gene_id, annotated_exons):
         ret = []
 
         # I'm not sure why it happens that we get exons like this but it seems to once in a while...
         annotated_exons = [x for x in annotated_exons if x[0] != x[1]]
 
-        for transcript in self.lrdb.get(gene_id, []):
+        for transcript in self._get_transcripts(gene_id):
             d = {
                 'id': transcript['id'],
                 'reads': transcript['transcript_reads'],
@@ -153,7 +158,7 @@ class SpliceGraphLR:
         annot_only_junctions = set((j['start'], j['end']) for j in shortread[subkey] if j['annotated'] == 1 and j['has_reads'] == 0)
         annot_junctions = set((j['start'], j['end']) for j in shortread[subkey] if j['annotated'] == 1)
         lr_junctions = set()
-        for transcript in self.lrdb.get(gene_id, []):
+        for transcript in self._get_transcripts(gene_id):
             for j in transcript[subkey]:
                 lr_junctions.add((j[0], j[1]))
 
@@ -206,7 +211,7 @@ class SpliceGraphLR:
             readssubkey = 'intron_retention_reads'
 
         sr_reads = {exp:v for exp, v in shortread[readssubkey].items()} #  if exp.endswith('Combined')
-        lr_reads = {v['experiment']: {(j[0], j[1],): r for j, r in zip(v[subkey], v[readssubkey])} for v in self.lrdb.get(gene_id, [])}
+        lr_reads = {v['experiment']: {(j[0], j[1],): r for j, r in zip(v[subkey], v[readssubkey])} for v in self._get_transcripts(gene_id)}
         j_sla, j_l, j_sl, j_la, j_s, j_sa, j_ao = self._overlap_categories(gene_id, shortread, subkey)
         #self._debugprint(j_sla, j_l, j_sl, j_la, j_s, j_sa, j_ao)
 
@@ -281,7 +286,7 @@ class SpliceGraphLR:
 
 
         #print(shortread['exons'])
-        for transcript in self.lrdb.get(gene_id, []):
+        for transcript in self._get_transcripts(gene_id):
 
             for lr_exon in transcript['exons']:
 
@@ -326,14 +331,26 @@ class SpliceGraphLR:
 
         return shortread
 
+    def lsvs(self, gene_id):
+        if gene_id in self.lrdb:
+            return self.lrdb[gene_id]['lsvs']
+        return {}
+
+    def lsv(self, gene_id, lsv_id):
+        return self.lsvs(gene_id)[lsv_id]
+
+    def has_lsv(self, gene_id, lsv_id):
+        return lsv_id in self.lsvs(gene_id)
+
     def combined_junctions(self, gene_id, lsv_junctions):
         """
         Figure out LR junction LSVs that match with short read labeled LSVs
+        This is the old version of on demand PSI calculation that will probably not be used anymore
         """
         lr_equiv_reads = []
         total_reads = 0
 
-        all_lr_transcripts = self.lrdb.get(gene_id, [])
+        all_lr_transcripts = self._get_transcripts(gene_id)
 
 
         for seek_junc in lsv_junctions:
