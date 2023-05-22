@@ -8,6 +8,7 @@ import argparse
 import pickle
 import h5py
 from tqdm import tqdm
+from numpy import inf
 
 parser = argparse.ArgumentParser(description='Add beta prior information to long-read voila file, using short read LSV categorization to assign junctions')
 parser.add_argument('--lr-voila-file', type=str, required=True,
@@ -27,6 +28,7 @@ with open(args.lr_voila_file, 'rb') as f:
 print('Loading SR data')
 sr_voila = h5py.File(args.lsv_definition_file, 'r', driver='core', backing_store=False)
 
+INF_VALUE = 100000
 
 def beta_prior(all_junc_reads):
 
@@ -43,6 +45,8 @@ def beta_prior(all_junc_reads):
         #fig, ax = plt.subplots(1, 1)
         x = np.linspace(0,1, 40)
         bins = beta.pdf(x, a, b)
+        bins[bins == inf] = INF_VALUE
+        bins[bins == -inf] = -INF_VALUE
 
         adj_psi.append(adjusted_psi)
         junc_bins.append(bins.tolist())
@@ -89,7 +93,7 @@ for gene_id in tqdm(sr_voila['lsvs'].keys()):
                 sr_junc = tuple(sr_junc)
                 reads = find_lr_junc_reads(lr_voila[gene_id]['transcripts'], sr_junc)
                 if reads is None:
-                    break
+                    reads = 0
                 lr_reads.append(reads)
             if len(lr_reads) != njunc:
                 # don't bother quantifying this lsv
