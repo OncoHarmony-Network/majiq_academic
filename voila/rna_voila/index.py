@@ -15,6 +15,7 @@ from rna_voila.voila_log import voila_log
 from multiprocessing import Pool, Manager
 import time
 import hashlib
+import os
 
 lsv_filters = ['a5ss', 'a3ss', 'exon_skipping', 'target', 'source', 'binary', 'complex', 'intron_retention']
 psi_keys = ['lsv_id', 'gene_id', 'gene_name'] + lsv_filters
@@ -66,8 +67,10 @@ class Index:
         :return:
         """
 
-        with MatrixHdf5(voila_file, 'r') as m:
-            return m.has_index()
+        if os.path.exists(voila_file):
+            with MatrixHdf5(voila_file, 'r', pre_config=True) as m:
+                return m.has_index()
+        return False
         #
         # with h5py.File(voila_file, 'a') as h:
         #     index_in_h = 'index' in h
@@ -110,10 +113,9 @@ class Index:
         :return: None
         """
         voila_index = np.array(voila_index, dtype=np.dtype(dtype))
-
         voila_files = ViewConfig().voila_files
 
-        with MatrixHdf5(voila_file, 'a') as m:
+        with MatrixHdf5(voila_file, 'a', pre_config=True) as m:
             hashval = Index._get_files_hash(voila_files)
             m.write_index(voila_index, hashval)
 
