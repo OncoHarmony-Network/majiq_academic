@@ -337,6 +337,10 @@ class ViewConfig:
                              'disable_reads']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
+            # singleton data store properties
+            if 'memory_map_hdf5' in settings and not 'index_file' in settings:
+                voila_log().critical('To use hdf5 memory map performance mode, you must specify --index-file as well')
+                sys.exit(1)
 
             this_config = _ViewConfig(**{**files, **settings})
 
