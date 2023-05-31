@@ -54,6 +54,7 @@ class MatrixHdf5:
         self._tsv_file = None
         self._filename = filename
         self._prior = None
+        self._pre_config = pre_config
 
         if voila_file:
             self.h = _open_hdf5(filename, mode) if pre_config else open_hdf5(filename, mode)
@@ -81,7 +82,7 @@ class MatrixHdf5:
 
     def close(self):
         if self.voila_file:
-            if self.mode != 'r':
+            if self.mode != 'r' or self._pre_config:
                 self.h.close()
 
         if self.voila_tsv:
