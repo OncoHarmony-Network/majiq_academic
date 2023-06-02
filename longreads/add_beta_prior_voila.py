@@ -44,6 +44,7 @@ def beta_prior(all_junc_reads):
         #mean, var, skew, kurt = beta.stats(a, b, moments='mvsk')
         #fig, ax = plt.subplots(1, 1)
         x = np.linspace(0,1, 40)
+        #x[0] += 0.01
         bins = beta.pdf(x, a, b)
         bins[bins == inf] = INF_VALUE
         bins[bins == -inf] = -INF_VALUE
@@ -95,9 +96,6 @@ for gene_id in tqdm(sr_voila['lsvs'].keys()):
                 if reads is None:
                     reads = 0
                 lr_reads.append(reads)
-            if len(lr_reads) != njunc:
-                # don't bother quantifying this lsv
-                continue
 
             psi, bins = beta_prior(lr_reads)
             lr_voila[gene_id]['lsvs'][lsv_id] = {'psi': psi, 'bins': bins}
