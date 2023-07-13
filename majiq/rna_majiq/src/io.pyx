@@ -131,7 +131,7 @@ cdef int  read_gff(str filename, map[string, Gene*] all_genes, vector[string] gi
                     parent_tx_id,
                 )
     # end loop over records in GFF3 file
-
+    logging.info("Adding Transcript Exons")
     for parent_tx_id, (gene_id, coord_list) in trcpt_id_dict.items():
 
         last_ss = constants.FIRST_LAST_JUNC
