@@ -460,6 +460,9 @@ class Violin {
 
         const area = d3.area()
             .curve(d3.curveCatmullRom)
+            .defined(function(d) {
+                return d > 0.001;
+            })
             // .defined(function (d) {
             //     if (d > (x.domain()[0]))
             //         return d;
