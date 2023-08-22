@@ -76,7 +76,11 @@
                         element.href = data[0] + '?absEdPSI_Threshold=' + $('#dpsi_threshold').val();
                         element.target = '_blank';
                         element.rel = "noopener noreferrer";
-                        element.textContent = data[1];
+                        element.textContent = data[1] + ' ⎆';
+                        element.classList.add('pure-button');
+                        element.classList.add('pure-button-primary');
+                        element.title = `Analyze gene ${data[1]} in depth`;
+                        element.style = "font-size: 150%; background-color: #009be7;";
                         return element.outerHTML
                     }
                 },
