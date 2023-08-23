@@ -472,7 +472,16 @@
 
                             }
                         }
-                    ]
+                    ],
+                    initComplete: function(){
+                        const selected_lsv_id = "{{ selected_lsv_id }}";
+                        if(selected_lsv_id !== ""){
+                            setTimeout(function(){
+                                $('.highlight').prop('checked', false);
+                                $(`.lsv[data-lsv-id="${selected_lsv_id}"] .highlight`).prop('checked', true).change();
+                            }, 500)
+                        }
+                    }
                 })
             });
 

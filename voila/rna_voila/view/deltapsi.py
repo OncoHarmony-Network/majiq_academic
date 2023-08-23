@@ -48,7 +48,9 @@ def gene(gene_id):
                 else:
                     filter_exon_numbers[exon_num].append(lsv.lsv_id)
 
-    return views.gene_view('dpsi_summary.html', gene_id, ViewDeltaPsi, filter_exon_numbers=filter_exon_numbers)
+    return views.gene_view('dpsi_summary.html', gene_id, ViewDeltaPsi,
+                           filter_exon_numbers=filter_exon_numbers,
+                           selected_lsv_id=request.args.get('lsv_id', ''))
 
 
 @bp.route('/lsv-data', methods=('POST',))

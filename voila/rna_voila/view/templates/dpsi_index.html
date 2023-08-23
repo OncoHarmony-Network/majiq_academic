@@ -70,10 +70,11 @@
             columnDefs: [
                 {
                     targets: 0,
-                    render: data => {
+                    render: (data, _, cols) => {
                         const element = document.createElement('a');
+                        const lsv_id = cols[1];
                         // we can move onto a more complicated query string writer / parser when the need arises
-                        element.href = data[0] + '?absEdPSI_Threshold=' + $('#dpsi_threshold').val();
+                        element.href = data[0] + `?absEdPSI_Threshold=${$('#dpsi_threshold').val()}&isv_id=${lsv_id}`;
                         element.target = '_blank';
                         element.rel = "noopener noreferrer";
                         element.textContent = data[1] + ' ⎆';

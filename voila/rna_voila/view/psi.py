@@ -89,7 +89,8 @@ def gene(gene_id):
                                group_names=m.group_names,
                                ucsc=ucsc,
                                multi_view=len(ViewConfig().voila_files) > 1,
-                               filter_exon_numbers=filter_exon_numbers
+                               filter_exon_numbers=filter_exon_numbers,
+                               selected_lsv_id=request.args.get('lsv_id', '')
                                )
 
 

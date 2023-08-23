@@ -312,7 +312,16 @@
                                     return container.outerHTML
                                 }
                             }
-                        ]
+                        ],
+                        initComplete: function(){
+                            const selected_lsv_id = "{{ selected_lsv_id }}";
+                            if(selected_lsv_id !== ""){
+                                setTimeout(function(){
+                                    $('.highlight').prop('checked', false);
+                                    $(`.lsv[data-lsv-id="${selected_lsv_id}"] .highlight`).prop('checked', true).change();
+                                }, 500)
+                            }
+                        }
                     })
                 });
                 {% else %}
@@ -329,9 +338,11 @@
                     columnDefs: [
                         {
                             targets: 0,
-                            render: data => {
+                            render: (data, _, cols) => {
                                 const form = document.createElement('div');
                                 form.classList.add('highlight-form');
+                                form.classList.add('lsv');
+                                form.setAttribute('data-lsv-id', cols[1]);
 
                                 const h = document.createElement('div');
 
@@ -415,7 +426,16 @@
                                 return btn.outerHTML + ucsc_a.outerHTML
                             }
                         },
-                    ]
+                    ],
+                    drawCallback: function(){
+                        const selected_lsv_id = "{{ selected_lsv_id }}";
+                        if(selected_lsv_id !== ""){
+                            setTimeout(function(){
+                                $('.highlight').prop('checked', false);
+                                $(`.lsv[data-lsv-id="${selected_lsv_id}"] .highlight`).prop('checked', true).change();
+                            }, 500)
+                        }
+                    }
                 });
                 {% endif %}
             });

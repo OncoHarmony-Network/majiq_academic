@@ -139,7 +139,8 @@ def gene(gene_id):
                                group_names=m.group_names,
                                ucsc=ucsc,
                                stat_names=m.stat_names,
-                               analysis_type='heterogen')
+                               analysis_type='heterogen',
+                               selected_lsv_id=request.args.get('lsv_id', ''))
 
 
 @bp.route('/lsv-data', methods=('POST',))
