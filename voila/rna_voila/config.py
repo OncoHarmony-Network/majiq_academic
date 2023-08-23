@@ -226,7 +226,7 @@ def write(args):
     else:
 
 
-        group_order_override = args.group_order_override
+        group_order_override = getattr(args, "group_order_override", None)
         voila_files, voila_files_to_group_names = find_voila_files(args.files, group_order_override=group_order_override)
         if group_order_override:
             voila_files = reorder_voila_files(voila_files, group_order_override, voila_files_to_group_names)
