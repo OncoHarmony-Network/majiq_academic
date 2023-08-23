@@ -248,7 +248,7 @@ class Index:
                         print("Indexing LSV IDs: %d / %d" % (size, work_size))
                         time.sleep(2)
 
-                log.info('Writing index: ' + voila_file)
+
                 voila_index = voila_index.get()
 
             else:
@@ -259,6 +259,7 @@ class Index:
                         voila_index.append(self._heterogen_pool_add_index(args))
 
             dtype = self._create_dtype(voila_index)
+            log.info('Writing index: ' + voila_file)
             self._write_index(voila_file, voila_index, dtype)
         else:
             log.info('Using index: ' + voila_file)
@@ -343,7 +344,7 @@ class Index:
                         print("Indexing LSV IDs: %d / %d" % (size, work_size))
                         time.sleep(2)
 
-                log.info('Writing index: ' + voila_file)
+
                 voila_index = voila_index.get()
 
             else:
@@ -354,6 +355,7 @@ class Index:
                         voila_index.append(self._deltapsi_pool_add_index(args))
 
             dtype = self._create_dtype(voila_index)
+            log.info('Writing index: ' + voila_file)
             self._write_index(voila_file, voila_index, dtype)
         else:
             log.info('Using index: ' + voila_file)
@@ -422,7 +424,7 @@ class Index:
                         print("Indexing LSV IDs: %d / %d" % (size, work_size))
                         time.sleep(2)
 
-                log.info('Writing index: ' + voila_file)
+
                 voila_index = voila_index.get()
 
             else:
@@ -433,6 +435,7 @@ class Index:
                         voila_index.append(self._psi_pool_add_index(args))
 
             dtype = self._create_dtype(voila_index)
+            log.info('Writing index: ' + voila_file)
             self._write_index(voila_file, voila_index, dtype)
         else:
             log.info('Using index: ' + voila_file)
