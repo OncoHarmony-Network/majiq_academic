@@ -210,14 +210,14 @@ class Violin {
         this.top_labels_padding = 0;
         this.x_axis_shift = 0;
         this.psi_label_offset_x = 0;
-        this.psi_label_offset_y = 0;
+        this.psi_label_offset_y = 8;
         this.psi_label_tilt = 0;
         this.right_padding = 0;
         this.max_label_length = 20;
         this.height_offset = 0;
 
 
-        if(violin_data.group_names.length * (this.violin_width + this.violin_pad) > window.innerWidth * 0.7){
+        if(violin_data.group_names && violin_data.group_names.length * (this.violin_width + this.violin_pad) > window.innerWidth * 0.7){
             this.violin_width = ((window.innerWidth * 0.7) / violin_data.group_names.length) - this.violin_pad;
             this.violin_label_tilt = 30;
             this.top_labels_padding = 7.5 * Math.sin(this.violin_label_tilt * Math.PI / 180) * Math.min(this.max_label_length, max_strlen_from_arr(violin_data.group_names));
