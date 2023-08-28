@@ -74,7 +74,7 @@
                         const element = document.createElement('a');
                         const lsv_id = cols[1];
                         // we can move onto a more complicated query string writer / parser when the need arises
-                        element.href = data[0] + `?absEdPSI_Threshold=${$('#dpsi_threshold').val()}&isv_id=${lsv_id}`;
+                        element.href = data[0] + `?absEdPSI_Threshold=${$('#dpsi_threshold').val()}&lsv_id=${lsv_id}`;
                         element.target = '_blank';
                         element.rel = "noopener noreferrer";
                         element.textContent = data[1] + ' ⎆';

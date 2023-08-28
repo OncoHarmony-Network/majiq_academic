@@ -88,56 +88,68 @@
             });
         });
 
-        json_ajax('{{ url_for("main.splice_graph", gene_id=gene.id) }}').then(gene => {
-            json_ajax('{{ url_for("main.transcripts", gene_id=gene.id) }}').then(transcripts => {
-                const sgs = new SpliceGraphs('.splice-graph-container', {
-                    gene: gene,
-                    transcripts: transcripts,
-                    remove_img: '{{ url_for('static', filename='img/remove.svg')}}',
-                    remove_fn: event => {
-                        const sg = event.target.closest('.splice-graph');
-                        send_ajax("{{ url_for('main.psi_splice_graphs') }}", {'remove': [sg.dataset.group, sg.dataset.experiment]})
-                            .then(() => {
-                                sg.remove();
-                                SpliceGraphTools._populate_sg_form();
+         let highlight_lsvs = null;
+        const sgLoadPromise = new Promise((resolve, reject) => {
+            json_ajax('{{ url_for("main.splice_graph", gene_id=gene.id) }}').then(gene => {
+                json_ajax('{{ url_for("main.transcripts", gene_id=gene.id) }}').then(transcripts => {
+                    const sgs = new SpliceGraphs('.splice-graph-container', {
+                        gene: gene,
+                        transcripts: transcripts,
+                        remove_img: '{{ url_for("static", filename="img/remove.svg")}}',
+                        remove_fn: event => {
+                            const sg = event.target.closest('.splice-graph');
+                            send_ajax("{{ url_for('main.psi_splice_graphs') }}", {'remove': [sg.dataset.group, sg.dataset.experiment]})
+                                .then(() => {
+                                    sg.remove();
+                                    SpliceGraphTools._populate_sg_form();
+                                });
+                        },
+                        download_img: '{{ url_for("static", filename="img/download.svg") }}'
+                    });
+
+                    highlight_lsvs = () => {
+                        const hl_data = Array.from(document.querySelectorAll('.highlight-form'))
+                            .map(f => {
+                                {% if multi_view %}
+                                    const lsv_id = f.parentNode.parentNode.getAttribute('data-lsv-id');
+                                {% else %}
+                                    const lsv_id = f.closest('tr').querySelectorAll('td')[1].textContent;
+                                {% endif %}
+                                const highlight = f.querySelector('.highlight').checked;
+                                const weighted = f.querySelector('.psi-weighted').checked;
+                                return [lsv_id, highlight, weighted];
                             });
-                    },
-                    download_img: '{{ url_for('static', filename='img/download.svg') }}'
-                });
 
-                highlight_lsvs = () => {
-                    const hl_data = Array.from(document.querySelectorAll('.highlight-form'))
-                        .map(f => {
-                            {% if multi_view %}
-                                const lsv_id = f.parentNode.parentNode.getAttribute('data-lsv-id');
-                            {% else %}
-                                const lsv_id = f.closest('tr').querySelectorAll('td')[1].textContent;
-                            {% endif %}
-                            const highlight = f.querySelector('.highlight').checked;
-                            const weighted = f.querySelector('.psi-weighted').checked;
-                            return [lsv_id, highlight, weighted];
-                        });
-
-                    send_ajax('{{ url_for("main.lsv_highlight") }}', hl_data).then(lsvs => {
-                        sgs.highlight(lsvs);
-                    })
-                };
-
-                sgs.init_create().then(s =>{
-                    new SpliceGraphTools(s, gene, highlight_lsvs);
-                    sgs.create_transcripts();
-                });
-
-                document.querySelectorAll('.lsv-cartoon').forEach(async function (c) {
-                    const lsv_id = c.closest('.lsv').dataset.lsvId;
-                    json_ajax('{{ url_for("main.lsv_data") }}/' + encodeURIComponent(lsv_id))
-                        .then(lsv_data => {
-                            const lsv = new Lsv(lsv_data);
-                            lsv.cartoon(c)
+                        send_ajax('{{ url_for("main.lsv_highlight") }}', hl_data).then(lsvs => {
+                            sgs.highlight(lsvs);
                         })
-                });
+                    };
 
-                {% if multi_view %}
+                    sgs.init_create().then(s =>{
+                        new SpliceGraphTools(s, gene, highlight_lsvs);
+                        sgs.create_transcripts();
+                        resolve();
+                    });
+
+
+
+                    {% if multi_view %}
+                    document.querySelectorAll('.lsv-cartoon').forEach(async function (c) {
+                        const lsv_id = c.closest('.lsv').dataset.lsvId;
+                        json_ajax('{{ url_for("main.lsv_data") }}/' + encodeURIComponent(lsv_id))
+                            .then(lsv_data => {
+                                const lsv = new Lsv(lsv_data);
+                                lsv.cartoon(c)
+                            })
+                    });
+                    {% endif %}
+
+
+                });
+            });
+        });
+
+        {% if multi_view %}
                     new MutationObserver(mutations => {
                         mutations
                             .forEach(m => m.addedNodes.forEach(n => {
@@ -177,21 +189,21 @@
                         copy_lsv_modal(elem, '{{ url_for("main.copy_lsv") }}/' + encodeURIComponent(lsv_id))
                     });
 
-                    $('.lsv-table tbody').on('mouseenter', 'tr', function(){
-                        const hl_data = [[$(this).closest('.lsv-table').data('lsv-id'), true, false]];
-                        const junc_coords = $(this).children().eq(0).text().split(',').map(function (x){return parseInt(x, 10)});
-                        send_ajax('{{ url_for("main.lsv_highlight") }}', hl_data).then(lsvs => {
-                            $.each(lsvs, function(i, v){
-                                lsvs[i]['junctions'] = lsvs[i]['junctions'].filter(function(junc){return junc[0] === junc_coords[0] && junc[1] === junc_coords[1]});
-                                if (!(lsvs[i]['intron_retention'][0] === junc_coords[0] && lsvs[i]['intron_retention'][1] === junc_coords[1])){
-                                    lsvs[i]['intron_retention'] = [];
-                                }
-                            });
-                            sgs.highlight(lsvs);
-                        })
-                    }).on('mouseleave', 'tr', function(){
-                        highlight_lsvs();
-                    });
+                    // $('.lsv-table tbody').on('mouseenter', 'tr', function(){
+                    //     const hl_data = [[$(this).closest('.lsv-table').data('lsv-id'), true, false]];
+                    //     const junc_coords = $(this).children().eq(0).text().split(',').map(function (x){return parseInt(x, 10)});
+                    //     send_ajax('{{ url_for("main.lsv_highlight") }}', hl_data).then(lsvs => {
+                    //         $.each(lsvs, function(i, v){
+                    //             lsvs[i]['junctions'] = lsvs[i]['junctions'].filter(function(junc){return junc[0] === junc_coords[0] && junc[1] === junc_coords[1]});
+                    //             if (!(lsvs[i]['intron_retention'][0] === junc_coords[0] && lsvs[i]['intron_retention'][1] === junc_coords[1])){
+                    //                 lsvs[i]['intron_retention'] = [];
+                    //             }
+                    //         });
+                    //         sgs.highlight(lsvs);
+                    //     })
+                    // }).on('mouseleave', 'tr', function(){
+                    //     highlight_lsvs();
+                    // });
                 {% else %}
                 new MutationObserver(mutations => {
                     mutations.forEach(m => m.addedNodes
@@ -247,6 +259,7 @@
                     });
                 {% endif %}
 
+                const lsvLoadPromise = new Promise((resolve, reject) => {
                 {% if multi_view %}
                 document.querySelectorAll('.lsv-table')
                 .forEach(async function (lsv_table) {
@@ -258,7 +271,7 @@
                         searching: false,
                         info: false,
                         ajax: {
-                            url: '{{ url_for('main.violin_data') }}' + '/' + encodeURIComponent(lsv_table.dataset.lsvId),
+                            url: '{{ url_for("main.violin_data") }}' + '/' + encodeURIComponent(lsv_table.dataset.lsvId),
                             data: d => {
                                 d['lsv_id'] = lsv_table.dataset.lsvId;
                                 d['hidden_idx'] = hidden_idx.length > 0 ? hidden_idx.join(',') : undefined;
@@ -314,13 +327,7 @@
                             }
                         ],
                         initComplete: function(){
-                            const selected_lsv_id = "{{ selected_lsv_id }}";
-                            if(selected_lsv_id !== ""){
-                                setTimeout(function(){
-                                    $('.highlight').prop('checked', false);
-                                    $(`.lsv[data-lsv-id="${selected_lsv_id}"] .highlight`).prop('checked', true).change();
-                                }, 500)
-                            }
+                            resolve();
                         }
                     })
                 });
@@ -329,10 +336,11 @@
                     autoWidth: false,
                     processing: true,
                     serverSide: true,
+                    paging: false,
                     lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
                     order: [[1, "asc"]],
                     ajax: {
-                        url: '{{ url_for('main.summary_table', gene_id=gene.id) }}',
+                        url: '{{ url_for("main.summary_table", gene_id=gene.id) }}',
                         type: 'POST'
                     },
                     columnDefs: [
@@ -420,25 +428,30 @@
                                 ucsc_a.target = '_blank';
                                 ucsc_a.rel = "noopener noreferrer";
                                 const ucsc_img = document.createElement('img');
-                                ucsc_img.src = '{{ url_for('static', filename="img/ucsc.png") }}';
+                                ucsc_img.src = '{{ url_for("static", filename="img/ucsc.png") }}';
                                 ucsc_a.appendChild(ucsc_img);
 
                                 return btn.outerHTML + ucsc_a.outerHTML
                             }
                         },
                     ],
-                    drawCallback: function(){
-                        const selected_lsv_id = "{{ selected_lsv_id }}";
-                        if(selected_lsv_id !== ""){
-                            setTimeout(function(){
-                                $('.highlight').prop('checked', false);
-                                $(`.lsv[data-lsv-id="${selected_lsv_id}"] .highlight`).prop('checked', true).change();
-                            }, 500)
-                        }
+                    initComplete: function(){
+                        resolve();
                     }
                 });
                 {% endif %}
             });
+
+        const selected_lsv_id = "{{ selected_lsv_id }}";
+        Promise.all([sgLoadPromise, lsvLoadPromise]).then(() => {
+            if(selected_lsv_id !== ""){
+                setTimeout(function(){
+                    $('.highlight').prop('checked', false);
+                    $(`.lsv[data-lsv-id="${selected_lsv_id}"] .highlight`).prop('checked', true)
+                        .get(0).scrollIntoView({behavior: 'smooth'});
+                    highlight_lsvs();
+                }, 0)
+            }
         });
 
         $('#results tbody')
