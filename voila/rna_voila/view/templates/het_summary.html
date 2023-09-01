@@ -176,7 +176,7 @@
                                     SpliceGraphTools._populate_sg_form();
                                 });
                         },
-                        download_img: '{{ url_for('static', filename='img/download.svg')}}'
+                        download_img: "{{ url_for('static', filename='img/download.svg')}}"
                     });
 
                     highlight_lsvs = () => {
@@ -443,7 +443,7 @@
 
                                     const dlBtn = document.createElement('img');
                                     dlBtn.classList.add('violin-download');
-                                    dlBtn.src = '/static/img/download.svg';
+                                    dlBtn.src = '{{ url_for("static", filename="img/download.svg") }}';
                                     dlBtn.height = 16;
 
                                     const container = document.createElement('div');
@@ -470,7 +470,7 @@
 
                                     const dlBtn = document.createElement('img');
                                     dlBtn.classList.add('heatmap-download');
-                                    dlBtn.src = '/static/img/download.svg';
+                                    dlBtn.src = '{{ url_for("static", filename="img/download.svg") }}';
                                     dlBtn.height = 16;
 
                                     const container = document.createElement('div');

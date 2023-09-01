@@ -315,7 +315,7 @@
 
                                     const dlBtn = document.createElement('img');
                                     dlBtn.classList.add('violin-download');
-                                    dlBtn.src = '/static/img/download.svg';
+                                    dlBtn.src = '{{ url_for("static", filename="img/download.svg") }}';
                                     dlBtn.height = 16;
 
                                     const container = document.createElement('div');
