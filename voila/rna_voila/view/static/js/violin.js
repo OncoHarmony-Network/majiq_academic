@@ -277,7 +277,8 @@ class Violin {
 
         this.draw_x_axis(g, data.group_means[group]);
         this.draw_psi_y_axis(g);
-        this.box_plots(g, data.group_bins[group])
+        this.box_plots(g, data.group_bins[group]);
+        this.draw_zero_line(g, data.group_bins[group]);
     }
 
     multipsi(svg) {
@@ -324,7 +325,8 @@ class Violin {
             this.draw_names_above(g, this.data.group_names);
         this.draw_x_axis(g, this.data.group_means[junc_idx]);
         this.draw_psi_y_axis(g);
-        this.box_plots(g, this.data.group_bins[junc_idx])
+        this.box_plots(g, this.data.group_bins[junc_idx]);
+        this.draw_zero_line(g, this.data.group_bins[junc_idx]);
 
 
     }
@@ -377,7 +379,8 @@ class Violin {
         }
         this.draw_x_axis(g, data.means.map(n => n.toFixed(3)));
         this.draw_dpsi_y_axis(g);
-        this.box_plots(g, data.bins)
+        this.box_plots(g, data.bins);
+        this.draw_zero_line(g, data.bins);
 
     }
 
@@ -425,6 +428,7 @@ class Violin {
         this.swarm(g2, color);
         this.draw_x_axis(g, data.group_names);
         this.draw_view_icons(g, data.group_names);
+        this.draw_zero_line(g, data.group_names);
         //this.pairwise_plot_triggers(g);
     }
 
@@ -783,6 +787,25 @@ class Violin {
                 }
                 el.setAttribute('data-group-idx', i)
             })
+    }
+
+    draw_zero_line(svg, x_axis_data) {
+        var self = this;
+        var chain = svg
+            .append('g')
+            .attr('class', 'zero-line-grp')
+            .append('svg')
+            .style('overflow', 'visible')
+            .attr('class', 'zero-line')
+            .append('line')
+            .attr("stroke", "black")
+            .attr("stroke-width", "1.5px")
+            .attr("x1", 0)
+            .attr("y1", this.violin_height)
+            .attr("x2", (this.violin_width +  this.violin_pad) * x_axis_data.length)
+            .attr("y2", this.violin_height);
+
+
     }
 
     draw_x_axis(svg, x_axis_data) {
