@@ -71,6 +71,9 @@ def splice_graph(gene_id):
 
 @bp.route('/splice-graph/lr/<gene_id>', methods=('POST', 'GET'))
 def splice_graph_lr(gene_id):
+    if not ViewConfig().long_read_file:
+        return jsonify({})
+
     with SpliceGraphLR(ViewConfig().long_read_file) as sgl:
         with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
             annot_exons = [(x['annotated_start'], x['annotated_end'],) for x in sg.exons(gene_id) if x['annotated']]
@@ -81,6 +84,8 @@ def splice_graph_lr(gene_id):
 
 @bp.route('/splice-graph/combined/<gene_id>', methods=('POST', 'GET'))
 def splice_graph_combined(gene_id):
+    if not ViewConfig().long_read_file:
+        return jsonify({})
 
     with SpliceGraphLR(ViewConfig().long_read_file) as sgl:
         with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:

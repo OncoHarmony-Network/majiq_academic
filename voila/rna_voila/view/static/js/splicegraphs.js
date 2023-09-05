@@ -7,6 +7,8 @@ const copy_text = str => {
     document.body.removeChild(el);
 };
 
+
+
 class SpliceGraphs {
     constructor(container, opts) {
         this.container_selector = container;
@@ -20,13 +22,19 @@ class SpliceGraphs {
         this.scaling_transcript = this.gene
         this.lr_sg_height = 40;
 
+
         // migrate reads from LR for general look-up
-        this.gene['junction_reads']['combined'] = this.gene_c['junction_reads']['combined']
-        this.gene['intron_retention_reads']['combined'] = this.gene_c['intron_retention_reads']['combined']
-        for(let lr_gene of this.gene_lr){
-            this.gene['junction_reads'][lr_gene.experiment] = lr_gene['junction_reads'][lr_gene.experiment]
-            this.gene['intron_retention_reads'][lr_gene.experiment] = lr_gene['intron_retention_reads'][lr_gene.experiment]
+        if(!isEmpty(this.gene_c)){
+            this.gene['junction_reads']['combined'] = this.gene_c['junction_reads']['combined']
+            this.gene['intron_retention_reads']['combined'] = this.gene_c['intron_retention_reads']['combined']
         }
+        if(!isEmpty(this.gene_lr)){
+            for(let lr_gene of this.gene_lr){
+                this.gene['junction_reads'][lr_gene.experiment] = lr_gene['junction_reads'][lr_gene.experiment]
+                this.gene['intron_retention_reads'][lr_gene.experiment] = lr_gene['intron_retention_reads'][lr_gene.experiment]
+            }
+        }
+
 
         this.lsv_ids = [];
         this.zoom = 1;
@@ -34,7 +42,7 @@ class SpliceGraphs {
         this.d = undefined;
         this.lsvs = [];
 
-        if(this.gene_lr){
+        if(!isEmpty(this.gene_lr)){
             this.gene_lr.start = this.gene.start;
             this.gene_lr.end = this.gene.end;
         }
@@ -881,9 +889,9 @@ class SpliceGraphs {
         return json_ajax(base_url+'/psi-splice-graphs')
             .then(json => json.forEach(x => this.create(x[0], x[1], "short_read")))
             //.then(() => this.create('combined', 'combined', "combined", this.gene_c))
-            .then(() => this.create('combined', 'combined', "combined", this.gene_c))
+            .then(() => isEmpty(this.gene_c) ? function(){} : this.create('combined', 'combined', "combined", this.gene_c))
 
-            .then(() => this.gene_lr.forEach(x => this.create('Long Reads', x.experiment, "long_read", x)))
+            .then(() => isEmpty(this.gene_lr) ? function(){} : this.gene_lr.forEach(x => this.create('Long Reads', x.experiment, "long_read", x)))
             .then(() => this)
 
 
