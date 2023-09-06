@@ -127,6 +127,9 @@ class MajiqV2Reader:
 
                 _path = path[:]
                 next_node = self.graph.end_node(edge)
+                if next_node._idx == None:
+                    continue
+
                 if edge.ir:
                     _path[-1] = exon(path[-1].start, next_node.end)
                     _start = next_node.end
@@ -151,9 +154,17 @@ class MajiqV2Reader:
     def getAllPathsBetweenNodes(self, startNode, endNode):
 
         # Mark all the vertices as not visited
-        visited =[False]*(len(self.graph.nodes))
+        start_i = self.graph.nodes.index(startNode)
+        end_i = self.graph.nodes.index(endNode)
+        nodeRange = range(start_i, end_i+1)
+        visited = {i: False for i in nodeRange}
+
         for i, node in enumerate(self.graph.nodes):
-            node._idx = i
+            if i in nodeRange:
+                node._idx = i
+            else:
+                node._idx = None
+
 
         # Create an array to store paths
         path = []
@@ -174,7 +185,6 @@ class MajiqV2Reader:
             start_node_idx = self.modules[module_idx]._global_node_start_idx
             end_node_idx = self.modules[module_idx]._global_node_end_idx
 
-        #print(start_node_idx, end_node_idx, self.graph.nodes)
         paths2search = [(self.graph.nodes[start_node_idx], self.graph.nodes[end_node_idx])]
 
         alt_starts = []
@@ -199,7 +209,6 @@ class MajiqV2Reader:
         for start, end in paths2search:
             for path, is_denovo, has_reads in self.getAllPathsBetweenNodes(start, end):
                 exons = tuple(exon(n.start, n.end) for n in path)
-                #print("PATH", exons)
                 yield exons, {}, is_denovo, has_reads
 
 
