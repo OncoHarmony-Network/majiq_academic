@@ -321,14 +321,14 @@ def lsv_data(lsv_id):
                     lr_group_bins = {m.group_names[0]: [[0] * 40] * len(psi.junctions)}
 
                 ret.append({
-                'lsv': {
-                    'name': m.group_names[0],
-                    'junctions': psi.junctions.tolist(),
-                    'group_means': lr_group_means,
-                    'group_bins': lr_group_bins
-                },
-                'exon_number': exon_number
-            })
+                    'lsv': {
+                        'name': m.group_names[0],
+                        'junctions': psi.junctions.tolist(),
+                        'group_means': lr_group_means,
+                        'group_bins': lr_group_bins
+                    },
+                    'exon_number': exon_number
+                })
 
         return jsonify(ret)
 

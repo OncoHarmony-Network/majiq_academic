@@ -7,6 +7,7 @@ import sys
 from rna_voila import constants
 
 from rna_voila.api import Matrix, SpliceGraph
+from rna_voila.api.splice_graph_lr import SpliceGraphLR
 from rna_voila.exceptions import FoundNoSpliceGraphFile, FoundMoreThanOneSpliceGraph, \
     MixedAnalysisTypeVoilaFiles, FoundMoreThanOneVoilaFile, AnalysisTypeNotFound
 from rna_voila.voila_log import voila_log
@@ -284,6 +285,11 @@ def write(args):
     with open(constants.CONFIG_FILE, 'r') as configfile:
         for line in configfile:
             voila_log().debug('CFG| ' + line[:-1])
+
+    if config_parser.get(settings, 'long_read_file'):
+        voila_log().info(f"Parsing long reads file: {config_parser.get(settings, 'long_read_file')}")
+        SpliceGraphLR(config_parser.get(settings, 'long_read_file'))
+
 
 
 class ViewConfig:
