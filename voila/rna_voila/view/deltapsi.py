@@ -101,7 +101,7 @@ def index_table():
             lsv_exons = sg.lsv_exons(gene_id, lsv_junctions)
 
             start, end = views.lsv_boundries(lsv_exons)
-            ucsc = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
+            ucsc = url_for('main.generate_ucsc_link', lsv_id=lsv_id)
 
             records[idx] = [
                 [url_for('main.gene', gene_id=gene_id), gene_name],
@@ -249,7 +249,7 @@ def summary_table(gene_id):
             lsv_junctions = dpsi.junctions
             lsv_exons = sg.lsv_exons(gene_id, lsv_junctions)
             start, end = views.lsv_boundries(lsv_exons)
-            ucsc = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
+            ucsc = url_for('main.generate_ucsc_link', lsv_id=lsv_id)
 
             records[idx] = [
                 highlight,
@@ -290,6 +290,10 @@ def download_genes():
 @bp.route('/copy-lsv/<lsv_id>', methods=('POST',))
 def copy_lsv(lsv_id):
     return views.copy_lsv(lsv_id, ViewDeltaPsi)
+
+@bp.route('/generate_ucsc_link', methods=('GET',))
+def generate_ucsc_link():
+    return views._generate_ucsc_link(request.args, ViewDeltaPsi)
 
 
 app.register_blueprint(bp)

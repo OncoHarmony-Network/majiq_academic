@@ -15,6 +15,7 @@ import os, sys
 from flask import Blueprint, Flask
 from flask_session import Session
 import tempfile, atexit, shutil
+from rna_voila.view.ucsc_api import make_custom_track
 
 
 if os.name != 'nt':
@@ -268,6 +269,61 @@ def find_exon_number(exons, ref_exon, strand):
             else:
                 return idx + 1
     return 'unk'
+
+
+def filter_gene_for_lsv(exons, junctions, introns, lsv_junctions):
+    out_exons = []
+
+    out_junctions = [x for x in junctions if [x['start'], x['end']] in lsv_junctions.tolist()]
+    out_introns = [x for x in introns if [x['start'], x['end']] in lsv_junctions.tolist()]
+
+    ex_search = out_junctions + out_introns
+
+    for exon in exons:
+        for structure in ex_search:
+            if (structure['start'] >= exon['start'] and structure['start'] <= exon['end']) or \
+                    (structure['end'] >= exon['start'] and structure['end'] <= exon['end']):
+                out_exons.append(exon)
+                break
+
+    return out_exons, out_junctions, out_introns
+
+def _generate_ucsc_link(request_args, matrix_type):
+
+    # http://view-localhost:5002/generate_ucsc_link?lsv_id=ENSMUSG00000028760:s:138177917-138178010
+    if 'gene_id' in request_args:
+        gene_id = request.args['gene_id']
+        with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
+
+            gene = sg.gene(gene_id)
+
+            exons = sg.exons(gene_id)
+            introns = sg.intron_retentions(gene_id)
+            junctions = sg.junctions(gene_id)
+
+            link = make_custom_track(sg.genome, gene['chromosome'], gene['strand'], list(exons), list(introns), list(junctions))
+
+            return redirect(link)
+    elif 'lsv_id' in request_args:
+        with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, matrix_type() as m:
+            gene_id = request.args['lsv_id'].split(':')[0]
+
+            gene = sg.gene(gene_id)
+
+            exons = sg.exons(gene_id)
+            junctions = sg.junctions(gene_id)
+            introns = sg.intron_retentions(gene_id)
+
+            lsv = m.lsv(request.args['lsv_id'])
+            lsv_junctions = lsv.junctions
+
+            exons, junctions, introns = filter_gene_for_lsv(exons, junctions, introns, lsv_junctions)
+
+            link = make_custom_track(sg.genome, gene['chromosome'], gene['strand'], exons, introns, junctions)
+            return redirect(link)
+    else:
+        return abort(403)
+
 
 
 if __name__ == '__main__':

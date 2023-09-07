@@ -125,5 +125,8 @@ def psi_splice_graphs():
 
         return jsonify(sg_init)
 
+@bp.route('/generate_ucsc_link', methods=('GET',))
+def generate_ucsc_link():
+    return views._generate_ucsc_link(request.args, None)
 
 app.register_blueprint(bp)
