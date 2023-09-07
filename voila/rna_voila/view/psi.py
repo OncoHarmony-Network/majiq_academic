@@ -191,6 +191,9 @@ def splice_graph(gene_id):
 
 @bp.route('/splice-graph/lr/<gene_id>', methods=('POST', 'GET'))
 def splice_graph_lr(gene_id):
+    if not ViewConfig().long_read_file:
+        return jsonify({})
+
     with SpliceGraphLR(ViewConfig().long_read_file) as sgl:
         with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
             annot_exons = [(x['annotated_start'], x['annotated_end'],) for x in sg.exons(gene_id) if x['annotated']]
@@ -201,6 +204,8 @@ def splice_graph_lr(gene_id):
 
 @bp.route('/splice-graph/combined/<gene_id>', methods=('POST', 'GET'))
 def splice_graph_combined(gene_id):
+    if not ViewConfig().long_read_file:
+        return jsonify({})
 
     with SpliceGraphLR(ViewConfig().long_read_file) as sgl:
         with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewPsis() as v:
@@ -283,7 +288,7 @@ def psi_splice_graphs():
 @bp.route('/lsv-data/<lsv_id>', methods=('POST',))
 def lsv_data(lsv_id):
 
-    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewPsis() as m, SpliceGraphLR(ViewConfig().long_read_file) as sgl:
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewPsis() as m:
         psi = m.lsv(lsv_id)
         ref_exon = psi.reference_exon
         gene_id = psi.gene_id
@@ -292,16 +297,7 @@ def lsv_data(lsv_id):
         exons = sg.exons(gene_id)
         exon_number = views.find_exon_number(exons, ref_exon, strand)
 
-        if sgl.has_lsv(gene_id, lsv_id):
-            lr_lsv = sgl.lsv(gene_id, lsv_id)
-            lr_group_means = {m.group_names[0]: lr_lsv['psi']}
-            lr_group_bins = {m.group_names[0]: lr_lsv['bins']}
-        else:
-            lr_group_means = {m.group_names[0]: [0] * len(psi.junctions)}
-            lr_group_bins = {m.group_names[0]: [[0] * 40] * len(psi.junctions)}
-
-
-        return jsonify([
+        ret = [
             {
                 'lsv': {
                     'name': m.group_names[0],
@@ -310,7 +306,21 @@ def lsv_data(lsv_id):
                     'group_bins': dict(psi.group_bins)
                 },
                 'exon_number': exon_number
-            }, {
+            }
+        ]
+
+        if ViewConfig().long_read_file:
+            with SpliceGraphLR(ViewConfig().long_read_file) as sgl:
+
+                if sgl.has_lsv(gene_id, lsv_id):
+                    lr_lsv = sgl.lsv(gene_id, lsv_id)
+                    lr_group_means = {m.group_names[0]: lr_lsv['psi']}
+                    lr_group_bins = {m.group_names[0]: lr_lsv['bins']}
+                else:
+                    lr_group_means = {m.group_names[0]: [0] * len(psi.junctions)}
+                    lr_group_bins = {m.group_names[0]: [[0] * 40] * len(psi.junctions)}
+
+                ret.append({
                 'lsv': {
                     'name': m.group_names[0],
                     'junctions': psi.junctions.tolist(),
@@ -318,9 +328,9 @@ def lsv_data(lsv_id):
                     'group_bins': lr_group_bins
                 },
                 'exon_number': exon_number
-            }
+            })
 
-        ])
+        return jsonify(ret)
 
 @bp.route('/violin-data', methods=('POST',))
 @bp.route('/violin-data/<lsv_id>', methods=('POST',))
