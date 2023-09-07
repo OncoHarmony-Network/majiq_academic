@@ -25,7 +25,7 @@ def init_session():
 @bp.route('/')
 def index():
     form = LsvFiltersForm()
-    return render_template('psi_index.html', form=form)
+    return render_template('multipsi_index.html', form=form)
 
 @bp.route('/dismiss-warnings', methods=('POST',))
 def dismiss_warnings():
@@ -83,7 +83,7 @@ def gene(gene_id):
 
 
 
-        return views.gene_view('psi_summary.html', gene_id, ViewPsis,
+        return views.gene_view('multipsi_summary.html', gene_id, ViewPsis,
                                lsv_data=lsv_data,
                                group_names=m.group_names,
                                ucsc=ucsc,
