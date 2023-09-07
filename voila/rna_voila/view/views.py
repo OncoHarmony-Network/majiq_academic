@@ -71,7 +71,7 @@ def get_bp(name):
     return app, bp
 
 
-from rna_voila.view import deltapsi, heterogen, psi, splicegraph
+from rna_voila.view import deltapsi, heterogen, psi, splicegraph, multipsi
 
 
 def run_service():
@@ -114,7 +114,10 @@ def get_app():
         run_app = splicegraph.app
 
     elif analysis_type == constants.ANALYSIS_PSI:
-        run_app = psi.app
+        if len(ViewConfig().voila_files) > 1:
+            run_app = multipsi.app
+        else:
+            run_app = psi.app
 
     elif analysis_type == constants.ANALYSIS_DELTAPSI:
         run_app = deltapsi.app

@@ -29,7 +29,7 @@ function dispFadeAlert(text){
 }
 
 function isEmpty(obj){
-    return Object.keys(obj).length === 0;
+    return obj === undefined ? true : Object.keys(obj).length === 0;
 }
 
 // from https://bl.ocks.org/tophtucker/62f93a4658387bb61e4510c37e2e97cf

@@ -7,7 +7,6 @@ from flask import render_template, url_for, jsonify, request, session, Response,
 
 from rna_voila.api.view_matrix import ViewPsi, ViewPsis
 from rna_voila.api.view_splice_graph import ViewSpliceGraph
-from rna_voila.api.splice_graph_lr import SpliceGraphLR
 from rna_voila.index import Index
 from rna_voila.view import views
 from rna_voila.view.datatables import DataTables
@@ -26,7 +25,7 @@ def init_session():
 @bp.route('/')
 def index():
     form = LsvFiltersForm()
-    return render_template('psi_index.html', form=form)
+    return render_template('multipsi_index.html', form=form)
 
 @bp.route('/dismiss-warnings', methods=('POST',))
 def dismiss_warnings():
@@ -64,7 +63,6 @@ def gene(gene_id):
 
         lsv_data = []
         lsv_is_source = {}
-
         for lsv_id in m.lsv_ids(gene_ids=[gene_id]):
             lsv = m.lsv(lsv_id)
 
@@ -85,7 +83,7 @@ def gene(gene_id):
 
 
 
-        return views.gene_view('psi_summary.html', gene_id, ViewPsis,
+        return views.gene_view('multipsi_summary.html', gene_id, ViewPsis,
                                lsv_data=lsv_data,
                                group_names=m.group_names,
                                ucsc=ucsc,
@@ -142,43 +140,6 @@ def nav(gene_id):
         })
 
 
-def add_psis(gd):
-
-    # for name in gd['experiment_names']:
-    #     junc_psis[name] = {}
-    junc_psis = {}
-
-    with ViewPsis() as v:
-        grp_name = v.group_names[0]
-        lsv_list = (x['lsv_id'].decode('utf-8') for x in Index.psi(gd['id']))
-
-        for lsv_id in lsv_list:
-            # print(lsv_id)
-            psi = v.lsv(lsv_id)
-            for psimean, junc_coord in zip(psi.group_means[grp_name], psi.junctions):
-
-                junc_start, junc_end = int(junc_coord[0]), int(junc_coord[1])
-                try:
-                    previous_psimean = junc_psis[junc_start][junc_end]
-                    psimean = (psimean + previous_psimean) / 2.0
-                except:
-                    pass
-
-                try:
-                    junc_psis[junc_start][junc_end] = psimean
-                except KeyError:
-                    junc_psis[junc_start] = {junc_end: psimean}
-
-            # print(psi.group_means)
-            # print(psi.junctions)
-            # print(dir(psi))
-            # lsv_type = psi.lsv_type
-            #
-            # lsv_exons = sg.lsv_exons(gene_id, psi.junctions)
-            # start, end = views.lsv_boundries(lsv_exons)
-    gd['junction_psis'] = junc_psis
-    return gd
-
 @bp.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
 def splice_graph(gene_id):
     with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewPsis() as v:
@@ -186,35 +147,8 @@ def splice_graph(gene_id):
         gd = sg.gene_experiment(gene_id, exp_names)
         gd['experiment_names'] = exp_names
         gd['group_names'] = v.group_names
-        gd = add_psis(gd)
         return jsonify(gd)
 
-@bp.route('/splice-graph/lr/<gene_id>', methods=('POST', 'GET'))
-def splice_graph_lr(gene_id):
-    if not ViewConfig().long_read_file:
-        return jsonify({})
-
-    with SpliceGraphLR(ViewConfig().long_read_file) as sgl:
-        with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
-            annot_exons = [(x['annotated_start'], x['annotated_end'],) for x in sg.exons(gene_id) if x['annotated']]
-            gd = sgl.gene(gene_id, annot_exons)
-
-            #print(gd)
-            return jsonify(gd)
-
-@bp.route('/splice-graph/combined/<gene_id>', methods=('POST', 'GET'))
-def splice_graph_combined(gene_id):
-    if not ViewConfig().long_read_file:
-        return jsonify({})
-
-    with SpliceGraphLR(ViewConfig().long_read_file) as sgl:
-        with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewPsis() as v:
-            exp_names = v.splice_graph_experiment_names
-            sr = sg.gene_experiment(gene_id, exp_names)
-            gd = sgl.combined_gene(gene_id, sr)
-            gd = add_psis(gd)
-
-            return jsonify(gd)
 
 @bp.route('/summary-table/<gene_id>', methods=('POST',))
 def summary_table(gene_id):
@@ -234,13 +168,10 @@ def summary_table(gene_id):
         for idx, record, records in dt.callback():
             lsv_id = record['lsv_id'].decode('utf-8')
             psi = v.lsv(lsv_id)
-
             lsv_type = psi.lsv_type
 
             gene = sg.gene(gene_id)
             lsv_exons = sg.lsv_exons(gene_id, psi.junctions)
-
-
             start, end = views.lsv_boundries(lsv_exons)
             ucsc = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
 
@@ -253,7 +184,6 @@ def summary_table(gene_id):
                 highlight,
                 lsv_id,
                 lsv_type,
-                grp_name,
                 grp_name,
                 ucsc
             ]
@@ -297,40 +227,15 @@ def lsv_data(lsv_id):
         exons = sg.exons(gene_id)
         exon_number = views.find_exon_number(exons, ref_exon, strand)
 
-        ret = [
-            {
-                'lsv': {
-                    'name': m.group_names[0],
-                    'junctions': psi.junctions.tolist(),
-                    'group_means': dict(psi.group_means),
-                    'group_bins': dict(psi.group_bins)
-                },
-                'exon_number': exon_number
-            }
-        ]
-
-        if ViewConfig().long_read_file:
-            with SpliceGraphLR(ViewConfig().long_read_file) as sgl:
-
-                if sgl.has_lsv(gene_id, lsv_id):
-                    lr_lsv = sgl.lsv(gene_id, lsv_id)
-                    lr_group_means = {m.group_names[0]: lr_lsv['psi']}
-                    lr_group_bins = {m.group_names[0]: lr_lsv['bins']}
-                else:
-                    lr_group_means = {m.group_names[0]: [0] * len(psi.junctions)}
-                    lr_group_bins = {m.group_names[0]: [[0] * 40] * len(psi.junctions)}
-
-                ret.append({
-                'lsv': {
-                    'name': m.group_names[0],
-                    'junctions': psi.junctions.tolist(),
-                    'group_means': lr_group_means,
-                    'group_bins': lr_group_bins
-                },
-                'exon_number': exon_number
-            })
-
-        return jsonify(ret)
+        return jsonify({
+            'lsv': {
+                'name': m.group_names[0],
+                'junctions': psi.junctions.tolist(),
+                'group_means': dict(psi.group_means),
+                'group_bins': dict(psi.group_bins)
+            },
+            'exon_number': exon_number
+        })
 
 @bp.route('/violin-data', methods=('POST',))
 @bp.route('/violin-data/<lsv_id>', methods=('POST',))
@@ -459,8 +364,8 @@ def lsv_highlight():
                         'intron_retention': intron_retention,
                         'reference_exon': list(psi.reference_exon),
                         'weighted': weighted,
-                        'group_means': group_means,
-                        'dir': lsv_id.split(':')[1]
+                        'group_means': group_means
+
                     })
 
         return jsonify(lsvs)

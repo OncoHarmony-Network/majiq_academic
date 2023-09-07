@@ -3,7 +3,7 @@
 {% block script %}
     <script>
 
-        const view_type = 'psi';
+        const view_type = 'multipsi';
 
         new MutationObserver(mutations => {
             mutations.forEach(m => m.addedNodes
@@ -17,15 +17,9 @@
 
 
                     json_ajax('{{ url_for("main.lsv_data") }}/' + encodeURIComponent(lsv_id)).then(lsv_data => {
-                        lsv_data = lsv_data[0]; // only short read for now.
+
                         const lsv = new Lsv(lsv_data);
                         lsv.cartoon(n.querySelector('.lsv-cartoon'));
-
-                        const violin = new Violin(lsv_data.lsv);
-                        const s = n.querySelector('.psi-violin-plot');
-                        lsv.draw_lsv_compact_stack_bars(n.querySelector('.lsv-single-compact-percentiles'));
-                        violin.psi(s);
-                        $(s).hide();
 
                     });
 
@@ -81,23 +75,6 @@
                 },
                 {
                     targets: 3,
-                    sortable: false,
-                    render: data => {
-                        const compact = document.createElement('canvas');
-                        compact.classList.add('lsv-single-compact-percentiles');
-                        compact.dataset.group = data;
-
-                        const violin = document.createElement('svg');
-                        violin.classList.add('psi-violin-plot');
-                        violin.setAttribute('width', '0');
-                        violin.setAttribute('height', '0');
-                        violin.dataset.group = data;
-
-                        return compact.outerHTML + violin.outerHTML
-                    }
-                },
-                {
-                    targets: 4,
                     sortable: false,
                     render: data => {
                         const copy_lsv = document.createElement('button');
@@ -225,7 +202,6 @@
                     <th>Gene Name</th>
                     <th>LSV ID</th>
                     <th>LSV Type</th>
-                    <th>Ψ per Junction</th>
                     <th>Links</th>
                 </tr>
                 </thead>

@@ -3,42 +3,13 @@
 {% block style %}
     {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/lib/sumoselect.min.css') }}">
-    {% if multi_view %}
-        <link rel="stylesheet" href="{{ url_for('static', filename='css/multi_input.css') }}">
-    {% endif %}
+
 <style>
 
 </style>
 {% endblock %}
 
 
-{% block heatmap_form %}
-    {% if multi_view %}
-    <div class="groups-display-form pure-form pure-form-stacked" style="float: right; margin-right: 10px; width:10%;">
-        <div>
-            <label for="groups-display">Show / Hide Groups</label>
-            <select id="groups-display" multiple style="width:100%;">
-
-            </select>
-            <button type="button" id="groups-display-all">All</button>
-            <button type="button" id="groups-display-none">None</button>
-        </div>
-        <div id="lsv-ordering-options">
-            <label>LSV Ordering</label>
-            <label for="lsv-order-exon-num" class="pure-radio">
-                <input id="lsv-order-exon-num" type="radio" name="lsv-order" value="exon-number-idx" checked>
-                Exon Number
-            </label>
-            <label for="lsv-order-type-len" class="pure-radio">
-                <input id="lsv-order-type-len" type="radio" name="lsv-order" value="type-length-idx">
-                Type Length
-            </label>
-        </div>
-
-    </div>
-    {% endif %}
-
-{% endblock %}
 
 
 {% block analysis_type_script %}
@@ -49,34 +20,10 @@
         // this stores a map of exon numbers so that we can map from the splicegraph numbers to
         // the LSV ID to search for
 
-        {% if multi_view %}
-            const view_type = 'multipsi';
 
-            // incase the screen is very small and content in the header takes more vertical space
-            // push down the content more so it does not overlap
-            $('.content').css('top',$('.gene-header').height() + 60);
+        const view_type = 'psi';
+        const filter_exon_numbers = {{ filter_exon_numbers|tojson }};
 
-            $('#lsv-ordering-options input').click(function(){
-                $('.lsv-container').eq(0).sortClass('lsv', $(this).val());
-            });
-
-            var hidden_idx = [];
-
-            $('#groups-display').change(function(){
-                hidden_idx = [];
-                $('#groups-display option:not(:selected)').each(function(i, elem){
-                    hidden_idx.push($(elem).index())
-                });
-            });
-
-            $('#groups-display').change($.debounce(1250, function(){
-                $('.lsv-table').DataTable().ajax.reload();
-            }));
-
-        {% else %}
-            const view_type = 'psi';
-            const filter_exon_numbers = {{ filter_exon_numbers|tojson }};
-        {% endif %}
 
         json_ajax('{{ url_for("main.nav", gene_id=gene.id) }}').then(json => {
             document.querySelector('.prev-gene').addEventListener('click', () => {
@@ -98,7 +45,7 @@
                         gene: gene,
                         gene_lr: gene_lr,
                         gene_c: gene_c,
-                        remove_img: '{{ url_for('static', filename='img/remove.svg')}}',
+                        remove_img: "{{ url_for('static', filename='img/remove.svg')}}",
                         remove_fn: event => {
                             const sg = event.target.closest('.splice-graph');
                             send_ajax("{{ url_for('main.psi_splice_graphs') }}", {'remove': [sg.dataset.group, sg.dataset.experiment]})
@@ -107,327 +54,229 @@
                                     SpliceGraphTools._populate_sg_form();
                                 });
                         },
-                        download_img: '{{ url_for('static', filename='img/download.svg') }}',
-                        resize_img: '{{ url_for('static', filename='img/resize.svg') }}'
+                        download_img: "{{ url_for('static', filename='img/download.svg') }}",
+                        resize_img: "{{ url_for('static', filename='img/resize.svg') }}"
                     });
 
-                    highlight_lsvs = () => {
-                        const hl_data = Array.from(document.querySelectorAll('.highlight-form'))
-                            .map(f => {
-                                {% if multi_view %}
-                                    const lsv_id = f.parentNode.parentNode.getAttribute('data-lsv-id');
-                                {% else %}
-                                    const lsv_id = f.closest('tr').querySelectorAll('td')[1].textContent;
-                                {% endif %}
-                                const highlight = f.querySelector('.highlight').checked;
-                                const weighted = f.querySelector('.psi-weighted').checked;
-                                return [lsv_id, highlight, weighted];
+            highlight_lsvs = () => {
+                const hl_data = Array.from(document.querySelectorAll('.highlight-form'))
+                    .map(f => {
+
+                        const lsv_id = f.closest('tr').querySelectorAll('td')[1].textContent;
+
+                        const highlight = f.querySelector('.highlight').checked;
+                        const weighted = f.querySelector('.psi-weighted').checked;
+                        return [lsv_id, highlight, weighted];
+                    });
+
+                send_ajax('{{ url_for("main.lsv_highlight") }}', hl_data).then(lsvs => {
+                    sgs.highlight(lsvs);
+                })
+            };
+
+            sgs.init_create().then(s => {
+                new SpliceGraphTools(s, gene, highlight_lsvs);
+                // When elements are hovered over and hidden, a problem that can happen is that the area will scroll violently due to the height change
+                // To mitigate this we fix the height of the splice graphs container
+                $('.splice-graph-container').css('min-height', $('.splice-graph-container').height() + 'px');
+            });
+
+            document.querySelectorAll('.lsv-cartoon').forEach(async function (c) {
+                const lsv_id = c.closest('.lsv').dataset.lsvId;
+                json_ajax('{{ url_for("main.lsv_data") }}/' + encodeURIComponent(lsv_id))
+                    .then(lsv_data => {
+                        const lsv = new Lsv(lsv_data);
+                        lsv.cartoon(c)
+                    })
+            });
+
+            new MutationObserver(mutations => {
+                mutations.forEach(m => m.addedNodes
+                    .forEach((n, i) => {
+                        const tds = n.querySelectorAll('td:not(.dataTables_empty)');
+
+                        if (!tds.length)
+                            return;
+
+
+
+                        const lsv_id = tds[1].textContent;
+                        json_ajax('{{ url_for("main.lsv_data") }}/' + encodeURIComponent(lsv_id))
+                            .then(all_lsv_data => {
+                                const lsv_data = all_lsv_data[0];
+                                const lr_lsv_data = all_lsv_data[1];
+
+                                const lsv = new Lsv(lsv_data);
+
+                                const violin = new Violin(lsv_data.lsv);
+                                lsv.cartoon(n.querySelector('.lsv-cartoon'));
+
+                                const s = n.querySelector('.psi-violin-plot');
+                                lsv.draw_lsv_compact_stack_bars(n.querySelector('.lsv-single-compact-percentiles'));
+                                $(s).hide();
+                                violin.psi(s);
+
+                                const lr_lsv = new Lsv(lr_lsv_data);
+                                const lr_violin = new Violin(lr_lsv_data.lsv);
+
+                                const lr_s = n.querySelector('.lr-psi-violin-plot');
+                                lr_lsv.draw_lsv_compact_stack_bars(n.querySelector('.lr-lsv-single-compact-percentiles'));
+                                $(lr_s).hide();
+                                lr_violin.psi(lr_s);
+
+
+
+
                             });
 
-                        send_ajax('{{ url_for("main.lsv_highlight") }}', hl_data).then(lsvs => {
-                            sgs.highlight(lsvs);
-                        })
-                    };
+                        n.querySelector('.highlight-form').onchange = (event) => {
 
-                    sgs.init_create().then(s => {
-                        new SpliceGraphTools(s, gene, highlight_lsvs);
-                        // When elements are hovered over and hidden, a problem that can happen is that the area will scroll violently due to the height change
-                        // To mitigate this we fix the height of the splice graphs container
-                        $('.splice-graph-container').css('min-height', $('.splice-graph-container').height() + 'px');
-                    });
-
-                    document.querySelectorAll('.lsv-cartoon').forEach(async function (c) {
-                        const lsv_id = c.closest('.lsv').dataset.lsvId;
-                        json_ajax('{{ url_for("main.lsv_data") }}/' + encodeURIComponent(lsv_id))
-                            .then(lsv_data => {
-                                const lsv = new Lsv(lsv_data);
-                                lsv.cartoon(c)
-                            })
-                    });
-
-                    {% if multi_view %}
-                        $('.lsv-header').each(function(i, elem){
-                            const lsv_id = elem.parentNode.getAttribute('data-lsv-id');
-                            elem.querySelector('.highlight-form').onchange = (event) => {
-                                const input = event.target;
-                                if (input.classList.contains('psi-weighted') && input.checked) {
-                                    input
-                                        .closest('.highlight-form')
-                                        .querySelectorAll('.highlight')
-                                        .forEach(hl => hl.checked = true)
-                                }
-
-                                highlight_lsvs();
-                            };
-
-                            copy_lsv_modal(elem, '{{ url_for("main.copy_lsv") }}/' + encodeURIComponent(lsv_id))
-                        });
-
-                        $('.lsv-table tbody').on('mouseenter', 'tr', function(){
-                            const hl_data = [[$(this).closest('.lsv-table').data('lsv-id'), true, false]];
-                            const junc_coords = $(this).children().eq(0).text().split(',').map(function (x){return parseInt(x, 10)});
-                            send_ajax('{{ url_for("main.lsv_highlight") }}', hl_data).then(lsvs => {
-                                $.each(lsvs, function(i, v){
-                                    lsvs[i]['junctions'] = lsvs[i]['junctions'].filter(function(junc){return junc[0] === junc_coords[0] && junc[1] === junc_coords[1]});
-                                    if (!(lsvs[i]['intron_retention'][0] === junc_coords[0] && lsvs[i]['intron_retention'][1] === junc_coords[1])){
-                                        lsvs[i]['intron_retention'] = [];
-                                    }
-                                });
-                                sgs.highlight(lsvs);
-                            })
-                        }).on('mouseleave', 'tr', function(){
+                            const input = event.target;
+                            if (input.classList.contains('psi-weighted') && input.checked) {
+                                input
+                                    .closest('.highlight-form')
+                                    .querySelectorAll('.highlight')
+                                    .forEach(hl => hl.checked = true)
+                            }
                             highlight_lsvs();
-                        });
-                    {% else %}
-                    new MutationObserver(mutations => {
-                        mutations.forEach(m => m.addedNodes
-                            .forEach((n, i) => {
-                                const tds = n.querySelectorAll('td:not(.dataTables_empty)');
+                        };
 
-                                if (!tds.length)
-                                    return;
+                        if(highlightFirst && i === 0){
+                            $(n).find('.highlight').prop('checked', true).trigger('change');
+                            highlightFirst = false;
+                        }else if(n.querySelector('.highlight').checked === true){
+                            $(n).find('.highlight').prop('checked', false).trigger('change');
+                        }
 
-
-
-                                const lsv_id = tds[1].textContent;
-                                json_ajax('{{ url_for("main.lsv_data") }}/' + encodeURIComponent(lsv_id))
-                                    .then(all_lsv_data => {
-                                        const lsv_data = all_lsv_data[0];
-                                        const lr_lsv_data = all_lsv_data[1];
-
-                                        const lsv = new Lsv(lsv_data);
-
-                                        const violin = new Violin(lsv_data.lsv);
-                                        lsv.cartoon(n.querySelector('.lsv-cartoon'));
-
-                                        const s = n.querySelector('.psi-violin-plot');
-                                        lsv.draw_lsv_compact_stack_bars(n.querySelector('.lsv-single-compact-percentiles'));
-                                        $(s).hide();
-                                        violin.psi(s);
-
-                                        const lr_lsv = new Lsv(lr_lsv_data);
-                                        const lr_violin = new Violin(lr_lsv_data.lsv);
-
-                                        const lr_s = n.querySelector('.lr-psi-violin-plot');
-                                        lr_lsv.draw_lsv_compact_stack_bars(n.querySelector('.lr-lsv-single-compact-percentiles'));
-                                        $(lr_s).hide();
-                                        lr_violin.psi(lr_s);
-
-
-
-
-                                    });
-
-
-                                n.querySelector('.highlight-form').onchange = (event) => {
-
-                                    const input = event.target;
-                                    if (input.classList.contains('psi-weighted') && input.checked) {
-                                        input
-                                            .closest('.highlight-form')
-                                            .querySelectorAll('.highlight')
-                                            .forEach(hl => hl.checked = true)
-                                    }
-                                    highlight_lsvs();
-                                };
-
-                                if(highlightFirst && i === 0){
-                                    $(n).find('.highlight').prop('checked', true).trigger('change');
-                                    highlightFirst = false;
-                                }else if(n.querySelector('.highlight').checked === true){
-                                    $(n).find('.highlight').prop('checked', false).trigger('change');
-                                }
-
-                                copy_lsv_modal(n, '{{ url_for("main.copy_lsv") }}/' + encodeURIComponent(lsv_id))
-                            })
-                        );
+                        copy_lsv_modal(n, '{{ url_for("main.copy_lsv") }}/' + encodeURIComponent(lsv_id))
                     })
-                        .observe(document.querySelector('#results tbody'), {
-                            childList: true,
-                        });
-                    {% endif %}
-
-                    {% if multi_view %}
-                    document.querySelectorAll('.lsv-table')
-                    .forEach(async function (lsv_table) {
-                        $(lsv_table).DataTable({
-                            autoWidth: false,
-                            processing: true,
-                            serverSide: true,
-                            paging: false,
-                            searching: false,
-                            info: false,
-                            ajax: {
-                                url: '{{ url_for('main.violin_data') }}' + '/' + encodeURIComponent(lsv_table.dataset.lsvId),
-                                data: d => {
-                                    d['lsv_id'] = lsv_table.dataset.lsvId;
-                                    d['hidden_idx'] = hidden_idx.length > 0 ? hidden_idx.join(',') : undefined;
-                                },
-                                type: 'POST'
-                            },
-                            columnDefs: [
-                                {
-                                    targets: 1,
-                                    sortable: false,
-                                    render: data => {
-
-                                        const violin = new Violin(data);
-
-                                        const element = document.createElement('svg');
-                                        element.classList.add('psi-violin-plot');
-                                        element.setAttribute('width', '0');
-                                        element.setAttribute('height', '0');
-
-                                        violin.multipsi(element);
-                                        if($('#groups-display option').length === 0){
-                                            $.each(data.group_names, function(i, v){
-                                                $('#groups-display').append(`<option value="${v}" selected>${v}</option>`);
-                                            });
-
-                                            $('#groups-display').SumoSelect({
-                                                'captionFormatAllSelected': 'All Groups are Visible',
-                                                'captionFormat': '{0} Groups are Visible',
-                                                'placeholder': 'No Groups are Visible',
-                                                'isClickAwayOk': true
-                                            });
-
-                                            $('#groups-display-all').click(function(){
-                                                $('#groups-display')[0].sumo.selectAll();
-                                            });
-
-                                            $('#groups-display-none').click(function(){
-                                                $('#groups-display')[0].sumo.unSelectAll();
-                                            });
-                                        }
-
-                                        return element.outerHTML
-                                    }
-                                }
-                            ]
-                        })
-                    });
-                    {% else %}
-                    $('#results').DataTable({
-                        autoWidth: false,
-                        processing: true,
-                        serverSide: true,
-                        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-                        order: [[1, "asc"]],
-                        ajax: {
-                            url: '{{ url_for('main.summary_table', gene_id=gene.id) }}',
-                            type: 'POST'
-                        },
-                        columnDefs: [
-                            {
-                                targets: 0,
-                                render: data => {
-                                    const form = document.createElement('div');
-                                    form.classList.add('highlight-form');
-
-                                    const h = document.createElement('div');
-
-                                    const hl = document.createElement('label');
-                                    hl.textContent = 'Highlight';
-
-                                    const hl_cb = document.createElement('input');
-                                    hl_cb.classList.add('highlight');
-                                    hl_cb.setAttribute('type', 'checkbox');
-                                    if (data[0])
-                                        hl_cb.setAttribute('checked', '');
-
-                                    hl.appendChild(hl_cb);
-                                    h.appendChild(hl);
-
-                                    const w = document.createElement('div');
-
-                                    const wl = document.createElement('label');
-                                    wl.textContent = 'Weighted';
-
-                                    const wl_cb = document.createElement('input');
-                                    wl_cb.classList.add('psi-weighted');
-                                    wl_cb.type = 'checkbox';
-                                    if (data[1])
-                                        wl_cb.setAttribute('checked', '');
-
-                                    wl.appendChild(wl_cb);
-                                    w.appendChild(wl);
-
-                                    form.appendChild(h);
-                                    form.appendChild(w);
-
-                                    return form.outerHTML
-                                },
-                            },
-                            {
-                                targets: 2,
-                                sortable: false,
-                                render: data => {
-                                    const element = document.createElement('canvas');
-                                    element.setAttribute('width', '200');
-                                    element.setAttribute('height', '80');
-                                    element.classList.add('lsv-cartoon');
-                                    element.dataset.lsvType = data;
-                                    return element.outerHTML
-                                }
-                            },
-                            {
-                                targets: 3,
-                                sortable: false,
-                                render: data => {
-                                    const compact = document.createElement('canvas');
-                                    compact.classList.add('lsv-single-compact-percentiles');
-                                    compact.dataset.group = data;
-
-                                    const violin = document.createElement('svg');
-                                    violin.classList.add('psi-violin-plot');
-                                    violin.setAttribute('width', '0');
-                                    violin.setAttribute('height', '0');
-                                    violin.dataset.group = data;
-
-                                    return compact.outerHTML + violin.outerHTML
-                                }
-                            },
-                            {
-                                targets: 4,
-                                sortable: false,
-                                render: data => {
-                                    const compact = document.createElement('canvas');
-                                    compact.classList.add('lr-lsv-single-compact-percentiles');
-                                    compact.dataset.group = data;
-
-                                    const violin = document.createElement('svg');
-                                    violin.classList.add('lr-psi-violin-plot');
-                                    violin.setAttribute('width', '0');
-                                    violin.setAttribute('height', '0');
-                                    violin.dataset.group = data;
-
-                                    return compact.outerHTML + violin.outerHTML
-                                }
-                            },
-                            {
-                                targets: 5,
-                                sortable: false,
-                                render: data => {
-                                    const btn = document.createElement('button');
-                                    btn.textContent = 'Copy LSV';
-                                    btn.classList.add('pure-button', 'copy-lsv');
-
-                                    const ucsc_a = document.createElement('a');
-                                    ucsc_a.href = data;
-                                    ucsc_a.target = '_blank';
-                                    ucsc_a.rel = "noopener noreferrer";
-                                    const ucsc_img = document.createElement('img');
-                                    ucsc_img.src = '{{ url_for('static', filename="img/ucsc.png") }}';
-                                    ucsc_a.appendChild(ucsc_img);
-
-                                    return btn.outerHTML + ucsc_a.outerHTML
-                                }
-                            },
-                        ]
-                    });
-                    {% endif %}
-
+                );
+            })
+                .observe(document.querySelector('#results tbody'), {
+                    childList: true,
                 });
+
+            $('#results').DataTable({
+                autoWidth: false,
+                processing: true,
+                serverSide: true,
+                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+                order: [[1, "asc"]],
+                ajax: {
+                    url: '{{ url_for('main.summary_table', gene_id=gene.id) }}',
+                    type: 'POST'
+                },
+                columnDefs: [
+                    {
+                        targets: 0,
+                        render: data => {
+                            const form = document.createElement('div');
+                            form.classList.add('highlight-form');
+
+                            const h = document.createElement('div');
+
+                            const hl = document.createElement('label');
+                            hl.textContent = 'Highlight';
+
+                            const hl_cb = document.createElement('input');
+                            hl_cb.classList.add('highlight');
+                            hl_cb.setAttribute('type', 'checkbox');
+                            if (data[0])
+                                hl_cb.setAttribute('checked', '');
+
+                            hl.appendChild(hl_cb);
+                            h.appendChild(hl);
+
+                            const w = document.createElement('div');
+
+                            const wl = document.createElement('label');
+                            wl.textContent = 'Weighted';
+
+                            const wl_cb = document.createElement('input');
+                            wl_cb.classList.add('psi-weighted');
+                            wl_cb.type = 'checkbox';
+                            if (data[1])
+                                wl_cb.setAttribute('checked', '');
+
+                            wl.appendChild(wl_cb);
+                            w.appendChild(wl);
+
+                            form.appendChild(h);
+                            form.appendChild(w);
+
+                            return form.outerHTML
+                        },
+                    },
+                    {
+                        targets: 2,
+                        sortable: false,
+                        render: data => {
+                            const element = document.createElement('canvas');
+                            element.setAttribute('width', '200');
+                            element.setAttribute('height', '80');
+                            element.classList.add('lsv-cartoon');
+                            element.dataset.lsvType = data;
+                            return element.outerHTML
+                        }
+                    },
+                    {
+                        targets: 3,
+                        sortable: false,
+                        render: data => {
+                            const compact = document.createElement('canvas');
+                            compact.classList.add('lsv-single-compact-percentiles');
+                            compact.dataset.group = data;
+
+                            const violin = document.createElement('svg');
+                            violin.classList.add('psi-violin-plot');
+                            violin.setAttribute('width', '0');
+                            violin.setAttribute('height', '0');
+                            violin.dataset.group = data;
+
+                            return compact.outerHTML + violin.outerHTML
+                        }
+                    },
+                    {
+                        targets: 4,
+                        sortable: false,
+                        render: data => {
+                            const btn = document.createElement('button');
+                            btn.textContent = 'Copy LSV';
+                            btn.classList.add('pure-button', 'copy-lsv');
+
+                            const ucsc_a = document.createElement('a');
+                            ucsc_a.href = data;
+                            ucsc_a.target = '_blank';
+                            ucsc_a.rel = "noopener noreferrer";
+                            const ucsc_img = document.createElement('img');
+                            ucsc_img.src = "{{ url_for('static', filename="img/ucsc.png") }}";
+                            ucsc_a.appendChild(ucsc_img);
+
+                            return btn.outerHTML + ucsc_a.outerHTML
+                        }
+                    },
+                    {
+                        targets: 5,
+                        sortable: false,
+                        render: data => {
+                            const btn = document.createElement('button');
+                            btn.textContent = 'Copy LSV';
+                            btn.classList.add('pure-button', 'copy-lsv');
+
+                            const ucsc_a = document.createElement('a');
+                            ucsc_a.href = data;
+                            ucsc_a.target = '_blank';
+                            ucsc_a.rel = "noopener noreferrer";
+                            const ucsc_img = document.createElement('img');
+                            ucsc_img.src = "{{ url_for('static', filename="img/ucsc.png") }}";
+                            ucsc_a.appendChild(ucsc_img);
+
+                            return btn.outerHTML + ucsc_a.outerHTML
+                        }
+                    }
+                ]
+            });
+            });
             });
         });
 
@@ -457,62 +306,7 @@
 {% endblock %}
 
 {% block bottom %}
-    {% if multi_view %}
-    <div class="lsv-container">
-        {% for lsv_id, lsv_type, exon_number, exon_number_idx, type_length_idx in lsv_data %}
-            <div class="lsv" data-exon-number="{{ exon_number }}" data-lsv-id="{{ lsv_id }}" data-exon-number-idx="{{ exon_number_idx }}"
-                 data-type-length-idx="{{ type_length_idx }}">
-                <div class="lsv-header ">
-                    <div class="highlight-form">
-                        <div>
-                            <label>
-                                Highlight
-                                <input class="highlight" type="checkbox">
-                            </label>
-                        </div>
-                        <div>
-                            <label>
-                                Weighted
-                                <input class="psi-weighted" type="checkbox">
-                            </label>
-                        </div>
-                    </div>
-                    <div>
-                        <canvas class="lsv-cartoon" width="200" height="80" data-lsv-type="{{ lsv_type }}"></canvas>
-                    </div>
-                    <div>
-                        {{ lsv_id }}
-                    </div>
-                    <div>
-                        <form class="pure-form pure-form-aligned">
-                            <fieldset>
-                                <div class="pure-control-group">
-                                    <select class="copy-lsv">
-                                        <option>Copy LSV</option>
-                                        {% for grp in group_names %}
-                                            <option value="{{ grp }}">{{ grp }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                            </fieldset>
-                        </form>
-                        <a href="{{ ucsc[lsv_id] }}" target="_blank" rel="noopener noreferrer"><img
-                                src="{{ url_for('static', filename="img/ucsc.png") }}"></a>
-                    </div>
-                </div>
-                <table class="pure-table lsv-table" data-lsv-id="{{ lsv_id }}">
-                    <thead>
-                    <tr>
-                        <th>Coordinates</th>
-                        <th>Violin</th>
-                    </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        {% endfor %}
-    </div>
-    {% else %}
+
     <div class="lsv-container">
         <div>
             <table id="results" class="pure-table">
@@ -531,5 +325,4 @@
             </table>
         </div>
     </div>
-    {% endif %}
 {% endblock %}
