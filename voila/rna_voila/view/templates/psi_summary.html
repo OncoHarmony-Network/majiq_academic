@@ -240,19 +240,17 @@
                         targets: 4,
                         sortable: false,
                         render: data => {
-                            const btn = document.createElement('button');
-                            btn.textContent = 'Copy LSV';
-                            btn.classList.add('pure-button', 'copy-lsv');
+                            const compact = document.createElement('canvas');
+                            compact.classList.add('lr-lsv-single-compact-percentiles');
+                            compact.dataset.group = data;
 
-                            const ucsc_a = document.createElement('a');
-                            ucsc_a.href = data;
-                            ucsc_a.target = '_blank';
-                            ucsc_a.rel = "noopener noreferrer";
-                            const ucsc_img = document.createElement('img');
-                            ucsc_img.src = "{{ url_for('static', filename="img/ucsc.png") }}";
-                            ucsc_a.appendChild(ucsc_img);
+                            const violin = document.createElement('svg');
+                            violin.classList.add('lr-psi-violin-plot');
+                            violin.setAttribute('width', '0');
+                            violin.setAttribute('height', '0');
+                            violin.dataset.group = data;
 
-                            return btn.outerHTML + ucsc_a.outerHTML
+                            return compact.outerHTML + violin.outerHTML
                         }
                     },
                     {
