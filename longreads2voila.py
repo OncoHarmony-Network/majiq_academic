@@ -278,7 +278,7 @@ transcript_raw_reads, junction_raw_reads, exons_raw_reads = reads_new_version(df
 # junction_raw_reads format: { 'gene_id': { (junc_start, junc_end) : reads ) }}
 
 #df_gtf_all = read_gtf(args.isq_gtf_file).to_pandas()
-flairreader = flairParser.FlairReader(gtf_df=df_gtf)
+flairreader = FlairReader(gtf_df=df_gtf)
 
 
 
