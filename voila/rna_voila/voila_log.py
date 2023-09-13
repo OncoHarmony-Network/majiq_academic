@@ -6,6 +6,10 @@ import os
 
 from rna_voila.constants import VOILA_LOG_NAME
 
+# this is only required to avoid BasicConfig call in the GtfParse library ruining all of our logger configs
+# may be removed in the future when presumably this bug would be fixed.
+# https://github.com/openvax/gtfparse/issues/40
+logging.getLogger().addHandler(logging.NullHandler())
 
 def voila_log(filename=None, silent=False, debug=False):
     """

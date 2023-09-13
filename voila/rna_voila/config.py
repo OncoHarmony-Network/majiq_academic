@@ -12,53 +12,61 @@ from rna_voila.exceptions import FoundNoSpliceGraphFile, FoundMoreThanOneSpliceG
     MixedAnalysisTypeVoilaFiles, FoundMoreThanOneVoilaFile, AnalysisTypeNotFound
 from rna_voila.voila_log import voila_log
 
-_ViewConfig = namedtuple('ViewConfig', ['voila_file', 'voila_files', 'splice_graph_file', 'analysis_type', 'nproc',
-                                        'force_index', 'debug', 'silent', 'port', 'host', 'web_server', 'index_file',
+_log_keys = ['logger', 'silent']
+_sys_keys = ['nproc', 'debug']
+_global_keys = ['analysis_type']
+
+_ViewConfig = namedtuple('ViewConfig', _global_keys + _sys_keys + _log_keys + ['voila_file', 'voila_files',
+                                        'splice_graph_file',
+                                        'force_index', 'port', 'host', 'web_server', 'index_file',
                                         'num_web_workers', 'strict_indexing', 'skip_type_indexing', 'splice_graph_only',
                                         'enable_passcode', 'ignore_inconsistent_group_errors',
                                         'enable_het_comparison_chooser', 'long_read_file'])
 _ViewConfig.__new__.__defaults__ = (None,) * len(_ViewConfig._fields)
-_TsvConfig = namedtuple('TsvConfig', ['file_name', 'voila_files', 'voila_file', 'splice_graph_file',
-                                      'non_changing_threshold', 'nproc', 'threshold', 'analysis_type', 'show_all',
-                                      'debug', 'probability_threshold', 'silent', 'gene_ids', 'gene_names', 'lsv_ids',
+_TsvConfig = namedtuple('TsvConfig', _global_keys + _sys_keys + _log_keys + ['file_name', 'voila_files', 'voila_file',
+                                      'splice_graph_file',
+                                      'non_changing_threshold', 'threshold', 'show_all',
+                                      'probability_threshold', 'gene_ids', 'gene_names', 'lsv_ids',
                                       'lsv_types', 'strict_indexing', 'show_read_counts',
                                       'ignore_inconsistent_group_errors', 'non_changing_pvalue_threshold',
                                       'non_changing_within_group_iqr',
                                       'non_changing_between_group_dpsi', 'changing_pvalue_threshold',
                                       'changing_between_group_dpsi'])
 _TsvConfig.__new__.__defaults__ = (None,) * len(_TsvConfig._fields)
-_ClassifyConfig = namedtuple('ClassifyConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
-                                      'nproc', 'decomplexify_psi_threshold', 'decomplexify_deltapsi_threshold',
-                                      'decomplexify_reads_threshold', 'analysis_type', 'gene_ids',
-                                      'debug', 'silent', 'keep_constitutive', 'keep_no_lsvs_modules', 'only_binary',
+_ClassifyConfig = namedtuple('ClassifyConfig', _global_keys + _sys_keys + _log_keys + ['directory', 'voila_files',
+                                      'voila_file', 'splice_graph_file',
+                                      'decomplexify_psi_threshold', 'decomplexify_deltapsi_threshold',
+                                      'decomplexify_reads_threshold', 'gene_ids',
+                                      'keep_constitutive', 'keep_no_lsvs_modules', 'only_binary',
                                       'untrimmed_exons', 'putative_multi_gene_regions',
-                                                'probability_changing_threshold',
-                                                'probability_non_changing_threshold', 'show_all',
-                                                'non_changing_pvalue_threshold', 'non_changing_within_group_iqr',
-                                                'non_changing_between_group_dpsi', 'changing_pvalue_threshold',
-                                                'changing_between_group_dpsi', 'changing_between_group_dpsi_secondary',
-                                                'keep_no_lsvs_junctions', 'debug_num_genes', 'overwrite', 'output_mpe',
-                                                'heatmap_selection', 'logger', 'enabled_outputs',
-                                                'ignore_inconsistent_group_errors', 'disable_metadata',
-                                                'show_read_counts', 'cassettes_constitutive_column',
-                                                'non_changing_median_reads_threshold', 'permissive_event_non_changing_threshold',
-                                                'include_change_cases', 'junc_gene_dist_column'])
+                                        'probability_changing_threshold',
+                                        'probability_non_changing_threshold', 'show_all',
+                                        'non_changing_pvalue_threshold', 'non_changing_within_group_iqr',
+                                        'non_changing_between_group_dpsi', 'changing_pvalue_threshold',
+                                        'changing_between_group_dpsi', 'changing_between_group_dpsi_secondary',
+                                        'keep_no_lsvs_junctions', 'debug_num_genes', 'overwrite', 'output_mpe',
+                                        'heatmap_selection', 'enabled_outputs',
+                                        'ignore_inconsistent_group_errors', 'disable_metadata',
+                                        'show_read_counts', 'cassettes_constitutive_column',
+                                        'non_changing_median_reads_threshold', 'permissive_event_non_changing_threshold',
+                                        'include_change_cases', 'junc_gene_dist_column'])
 _ClassifyConfig.__new__.__defaults__ = (None,) * len(_ClassifyConfig._fields)
-_FilterConfig = namedtuple('FilterConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
-                                            'nproc', 'gene_ids', 'debug', 'silent', 'analysis_type', 'overwrite',
+_FilterConfig = namedtuple('FilterConfig', _global_keys + _sys_keys + _log_keys + ['directory', 'voila_files',
+                                            'voila_file', 'splice_graph_file',
+                                            'gene_ids', 'overwrite',
                                             'gene_ids_file', 'lsv_ids', 'lsv_ids_file', 'voila_files_only',
                                             'splice_graph_only',
                                             'changing_threshold', 'non_changing_threshold',
                                             'probability_changing_threshold',
-                                            'probability_non_changing_threshold', 'changing', 'non_changing',
-                                            'logger'])
+                                            'probability_non_changing_threshold', 'changing', 'non_changing'])
 _FilterConfig.__new__.__defaults__ = (None,) * len(_FilterConfig._fields)
-_SplitterConfig = namedtuple('SplitterConfig', ['directory', 'voila_files', 'voila_file', 'splice_graph_file',
-                                      'nproc', 'debug', 'silent', 'num_divisions', 'copy_only', 'analysis_type',
-                                                'overwrite', 'logger'])
+_SplitterConfig = namedtuple('SplitterConfig', _global_keys + _sys_keys + _log_keys + ['directory', 'voila_files',
+                                        'voila_file', 'splice_graph_file', 'num_divisions', 'copy_only', 'overwrite'])
 _SplitterConfig.__new__.__defaults__ = (None,) * len(_SplitterConfig._fields)
-_RecombineConfig = namedtuple('RecombineConfig', ['directories', 'directory', 'nproc', 'debug', 'silent', 'analysis_type', 'logger'])
+_RecombineConfig = namedtuple('RecombineConfig', _global_keys + _sys_keys + _log_keys + ['directories', 'directory'])
 _RecombineConfig.__new__.__defaults__ = (None,) * len(_RecombineConfig._fields)
+_LongReadsConfig = namedtuple('LongReadsConfig', _global_keys + _sys_keys + _log_keys + ['voila_file', 'lr_gtf_file', 'lr_bed_file', 'lr_tsv_file', 'splice_graph_file', 'output_file', 'gene_id'])
+_LongReadsConfig.__new__.__defaults__ = (None,) * len(_LongReadsConfig._fields)
 
 # global config variable to act as the singleton instance of the config.
 this_config = None
@@ -199,12 +207,12 @@ def write(args):
     attrs = (a for a in attrs if not a[0].startswith('_'))
     attrs = dict(attrs)
 
-    if not args.func.__name__ == 'recombine':
+    if not args.func.__name__ in ('recombine', 'longReadsInputsToLongReadsVoila'):
         sg_file = find_splice_graph_file(args.files)
     else:
         sg_file = None
 
-    if (hasattr(args, 'splice_graph_only') and args.splice_graph_only) or args.func.__name__ == 'recombine':
+    if (hasattr(args, 'splice_graph_only') and args.splice_graph_only) or args.func.__name__ in ('recombine', 'longReadsInputsToLongReadsVoila'):
 
         analysis_type = ''
         voila_files = []
@@ -286,7 +294,7 @@ def write(args):
         for line in configfile:
             voila_log().debug('CFG| ' + line[:-1])
 
-    if config_parser.get(settings, 'long_read_file'):
+    if config_parser.has_option(settings, 'long_read_file') and config_parser.get(settings, 'long_read_file'):
         voila_log().info(f"Parsing long reads file: {config_parser.get(settings, 'long_read_file')}")
         SpliceGraphLR(config_parser.get(settings, 'long_read_file'))
 
@@ -549,5 +557,33 @@ class RecombineConfig:
                     filters[key] = config_parser['FILTERS'][key].split('\n')
 
             this_config = _RecombineConfig(**{**settings, **filters})
+
+        return this_config
+
+class LongReadsConfig:
+    def __new__(cls, *args, **kwargs):
+
+        global this_config
+
+        if this_config is None:
+            voila_log().debug('Generating config object')
+            config_parser = configparser.ConfigParser()
+            config_parser.read(constants.CONFIG_FILE)
+
+            settings = dict(config_parser['SETTINGS'])
+
+            for int_key in []:
+                settings[int_key] = config_parser['SETTINGS'].getint(int_key)
+            for float_key in []:
+                settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
+            for bool_key in []:
+                settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
+
+            filters = {}
+            if config_parser.has_section('FILTERS'):
+                for key, value in config_parser['FILTERS'].items():
+                    filters[key] = config_parser['FILTERS'][key].split('\n')
+
+            this_config = _LongReadsConfig(**{**settings, **filters})
 
         return this_config

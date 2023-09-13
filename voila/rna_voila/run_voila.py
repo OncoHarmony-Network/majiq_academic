@@ -13,6 +13,7 @@ from rna_voila.view.views import run_service
 from rna_voila.classify import Classify
 from rna_voila.filter import Filter
 from rna_voila.splitter import splitter, recombine
+from rna_voila.longreads import longReadsInputsToLongReadsVoila
 
 def check_list_file(value):
     """
@@ -408,6 +409,26 @@ required_recombine_parser.add_argument('-d', '--directory', required=True, help=
                                                                                 "output will be created.")
 
 
+longread_parser = argparse.ArgumentParser(add_help=False)
+longread_parser.add_argument('--voila-file', type=check_file,
+                         help='This should be a .psi.voila file which we will match LSV definitions to to run the beta '
+                              'prior. If not provided, PSI values will not be rendered for long read LSVs')
+longread_parser.add_argument('--gene-id', type=str, required=False,
+                    help='Limit to a gene-id for testing')
+required_longread_parser = longread_parser.add_argument_group('required named arguments')
+required_longread_parser.add_argument('--lr-gtf-file', required=True, type=check_file,
+                    help='path to the long read GTF file')
+required_longread_parser.add_argument('--lr-bed-file', required=True, type=check_file,
+                    help='path to the long read BED file')
+required_longread_parser.add_argument('--lr-tsv-file', required=True, type=check_file,
+                    help='path to the long read TSV file')
+required_longread_parser.add_argument('-o', '--output-file', type=str, required=True,
+                    help='the path to write the resulting voila file to (recommended extension .lr.voila)')
+required_longread_parser.add_argument('-sg', '--splice-graph-file', required=True, type=check_file,
+                    help='the path to the majiq splice graph file which will be used to align to annotated exons')
+
+
+
 # subparsers
 subparsers = parser.add_subparsers(help='')
 subparsers.add_parser('tsv', parents=[tsv_parser, sys_parser, log_parser],
@@ -428,6 +449,9 @@ subparsers.add_parser('split', parents=[split_parser, sys_parser, log_parser],
 subparsers.add_parser('recombine', parents=[recombine_parser, sys_parser, log_parser],
                       help='Used to combine output from a `voila split` run, after all initial '
                            'runs are complete').set_defaults(func=recombine)
+subparsers.add_parser('lr', parents=[longread_parser, sys_parser, log_parser],
+                      help='Preprocess long read data from a variety of tools to append to the voila view visualization '
+                           '').set_defaults(func=longReadsInputsToLongReadsVoila)
 
 
 
