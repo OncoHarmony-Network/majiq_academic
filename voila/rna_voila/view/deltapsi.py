@@ -9,6 +9,7 @@ from rna_voila.index import Index
 from rna_voila.view import views
 from rna_voila.view.datatables import DataTables
 from rna_voila.view.forms import LsvFiltersForm, DeltaPsiFiltersForm
+from rna_voila.config import ViewConfig
 
 app, bp = views.get_bp(__name__)
 
@@ -47,7 +48,9 @@ def gene(gene_id):
                 else:
                     filter_exon_numbers[exon_num].append(lsv.lsv_id)
 
-    return views.gene_view('dpsi_summary.html', gene_id, ViewDeltaPsi, filter_exon_numbers=filter_exon_numbers)
+    return views.gene_view('dpsi_summary.html', gene_id, ViewDeltaPsi,
+                           filter_exon_numbers=filter_exon_numbers,
+                           selected_lsv_id=request.args.get('lsv_id', ''))
 
 
 @bp.route('/lsv-data', methods=('POST',))
@@ -294,6 +297,11 @@ def copy_lsv(lsv_id):
 @bp.route('/generate_ucsc_link', methods=('GET',))
 def generate_ucsc_link():
     return views._generate_ucsc_link(request.args, ViewDeltaPsi)
+
+@bp.route('/transcripts/<gene_id>', methods=('POST', 'GET'))
+def transcripts(gene_id):
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
+        return jsonify(sg.gene_transcript_exons(gene_id))
 
 
 app.register_blueprint(bp)

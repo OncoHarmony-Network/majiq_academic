@@ -15,41 +15,58 @@
             });
         });
 
-        json_ajax('{{ url_for("main.splice_graph", gene_id=gene.id) }}').then(gene => {
+        let highlight_lsvs = null;
+        const sgLoadPromise = new Promise((resolve, reject) => {
+            json_ajax('{{ url_for("main.splice_graph", gene_id=gene.id) }}').then(gene => {
+                json_ajax('{{ url_for("main.transcripts", gene_id=gene.id) }}').then(transcripts => {
+                    const sgs = new SpliceGraphs('.splice-graph-container', {
+                        gene: gene,
+                        transcripts: transcripts,
+                        remove_img: "{{ url_for('static', filename='img/remove.svg')}}",
+                        remove_fn: event => {
+                            const sg = event.target.closest('.splice-graph');
+                            const grp = sg.dataset.group;
+                            const exp = sg.dataset.exp;
+                            send_ajax("{{ url_for('main.psi_splice_graphs') }}", {'remove': [grp, exp]}).
+                            then(() => {
+                                sg.remove();
+                                SpliceGraphTools._populate_sg_form();
+                            });
+                        },
+                        download_img: "{{ url_for('static', filename='img/download.svg')}}"});
 
-            const sgs = new SpliceGraphs('.splice-graph-container', {
-                gene: gene,
-                remove_img: '{{ url_for('static', filename='img/remove.svg')}}',
-                remove_fn: event => {
-                    const sg = event.target.closest('.splice-graph');
-                    const grp = sg.dataset.group;
-                    const exp = sg.dataset.exp;
-                    send_ajax('{{ url_for('main.psi_splice_graphs') }}', {'remove': [grp, exp]})
-                        .then(() => {
-                            sg.remove();
-                            SpliceGraphTools._populate_sg_form();
-                        });
-                },
-                download_img: '{{ url_for('static', filename='img/download.svg')}}'
-            });
-
-            sgs.init_create().then(s => new SpliceGraphTools(s, gene, highlight_lsvs));
-
-            const highlight_lsvs = () => {
-                const hl_data = Array.from(document.querySelectorAll('.highlight-form'))
-                    .map(f => {
-                        const lsv_id = f.closest('tr').querySelectorAll('td')[1].textContent;
-                        const highlight = f.querySelector('.highlight').checked;
-                        const weighted = f.querySelector('.psi-weighted').checked;
-                        return [lsv_id, highlight, weighted];
+                    sgs.init_create().then(s => {
+                        new SpliceGraphTools(s, gene, highlight_lsvs);
+                        sgs.create_transcripts();
+                        resolve();
                     });
 
-                send_ajax('{{ url_for("main.lsv_highlight") }}', hl_data).then(lsvs => {
-                    sgs.highlight(lsvs);
-                })
-            };
+                    highlight_lsvs = () => {
+                        const hl_data = Array.from(document.querySelectorAll('.highlight-form'))
+                            .map(f => {
+                                const lsv_id = f.closest('tr').querySelectorAll('td')[1].textContent;
+                                const highlight = f.querySelector('.highlight').checked;
+                                const weighted = f.querySelector('.psi-weighted').checked;
+                                return [lsv_id, highlight, weighted];
+                            });
 
-            new MutationObserver(mutations => {
+                        send_ajax('{{ url_for("main.lsv_highlight") }}', hl_data).then(lsvs => {
+                            sgs.highlight(lsvs);
+                        })
+                    };
+
+
+
+
+                });
+
+            });
+
+
+
+        })
+
+        new MutationObserver(mutations => {
                 mutations.forEach(m => m.addedNodes
                     .forEach((n, i) => {
                         const tds = n.querySelectorAll('td:not(.dataTables_empty)');
@@ -98,10 +115,10 @@
                                     highlight_lsvs();
                                 }
 
-                                if(highlightFirst && i === 0){
+                                if (highlightFirst && i === 0) {
                                     $(n).find('.highlight').prop('checked', true).trigger('change');
                                     highlightFirst = false;
-                                }else if(n.querySelector('.highlight').checked === true){
+                                } else if (n.querySelector('.highlight').checked === true) {
                                     $(n).find('.highlight').prop('checked', false).trigger('change');
                                 }
                             });
@@ -116,125 +133,143 @@
                     childList: true,
                 });
 
-            $('#results').DataTable({
-                autoWidth: false,
-                processing: true,
-                serverSide: true,
-                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-                order: [[1, "asc"]],
-                ajax: {
-                    url: '{{ url_for('main.summary_table', gene_id=gene.id) }}',
-                    type: 'POST'
-                },
-                columnDefs: [
-                    {
-                        targets: 0,
-                        render: data => {
-                            const form = document.createElement('div');
-                            form.classList.add('highlight-form');
 
-                            const h = document.createElement('div');
 
-                            const hl = document.createElement('label');
-                            hl.textContent = 'Highlight';
-
-                            const hl_cb = document.createElement('input');
-                            hl_cb.classList.add('highlight');
-                            hl_cb.setAttribute('type', 'checkbox');
-                            if (data[0])
-                                hl_cb.setAttribute('checked', '');
-
-                            hl.appendChild(hl_cb);
-                            h.appendChild(hl);
-
-                            const w = document.createElement('div');
-
-                            const wl = document.createElement('label');
-                            wl.textContent = 'Weighted';
-
-                            const wl_cb = document.createElement('input');
-                            wl_cb.classList.add('psi-weighted');
-                            wl_cb.type = 'checkbox';
-                            if (data[1])
-                                wl_cb.setAttribute('checked', '');
-
-                            wl.appendChild(wl_cb);
-                            w.appendChild(wl);
-
-                            form.appendChild(h);
-                            form.appendChild(w);
-
-                            return form.outerHTML
-                        }
+        const lsvLoadPromise = new Promise((resolve, reject) => {
+                $('#results').DataTable({
+                    autoWidth: false,
+                    processing: true,
+                    serverSide: true,
+                    lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+                    order: [[1, "asc"]],
+                    ajax: {
+                        url: '{{ url_for('main.summary_table', gene_id=gene.id) }}',
+                        type: 'POST'
                     },
-                    {
-                        targets: 2,
-                        orderable: false,
-                        render: data => {
-                            const element = document.createElement('canvas');
-                            element.setAttribute('width', '200');
-                            element.setAttribute('height', '80');
-                            element.classList.add('lsv-cartoon');
-                            element.dataset.lsvType = data;
-                            return element.outerHTML
-                        }
-                    },
-                    {
-                        targets: 4,
-                        render: () => {
-                            const excl_incl = document.createElement('svg');
-                            excl_incl.classList.add('excl-incl-rect');
-                            excl_incl.setAttribute('width', '0');
-                            excl_incl.setAttribute('height', '0');
+                    columnDefs: [
+                        {
+                            targets: 0,
+                            render: (data, _, cols) => {
+                                const form = document.createElement('div');
+                                form.classList.add('highlight-form');
+                                form.classList.add('lsv');
+                                form.setAttribute('data-lsv-id', cols[1]);
 
-                            const dpsi_violin = document.createElement('svg');
-                            dpsi_violin.classList.add('dpsi-violin');
-                            dpsi_violin.setAttribute('width', '0');
-                            dpsi_violin.setAttribute('height', '0');
+                                const h = document.createElement('div');
 
-                            return excl_incl.outerHTML + dpsi_violin.outerHTML;
-                        }
-                    },
-                    {
-                        targets: [3, 5],
-                        orderable: false,
-                        render: data => {
-                            const compact = document.createElement('canvas');
-                            compact.classList.add('lsv-single-compact-percentiles');
-                            compact.dataset.group = data;
+                                const hl = document.createElement('label');
+                                hl.textContent = 'Highlight';
 
-                            const violin = document.createElement('svg');
-                            violin.classList.add('psi-violin-plot');
-                            violin.setAttribute('width', '0');
-                            violin.setAttribute('height', '0');
-                            violin.dataset.group = data;
+                                const hl_cb = document.createElement('input');
+                                hl_cb.classList.add('highlight');
+                                hl_cb.setAttribute('type', 'checkbox');
+                                if (data[0])
+                                    hl_cb.setAttribute('checked', '');
 
-                            return compact.outerHTML + violin.outerHTML
-                        }
-                    },
-                    {
-                        targets: 6,
-                        orderable: false,
-                        render: data => {
-                            const copy_lsv = document.createElement('button');
-                            copy_lsv.textContent = 'Copy LSV';
-                            copy_lsv.classList.add('pure-button', 'copy-lsv');
+                                hl.appendChild(hl_cb);
+                                h.appendChild(hl);
 
-                            const ucsc_a = document.createElement('a');
-                            ucsc_a.href = data;
-                            ucsc_a.target = '_blank';
-                            ucsc_a.rel = "noopener noreferrer";
-                            const ucsc_img = document.createElement('img');
-                            ucsc_img.src = '{{ url_for('static', filename="img/ucsc.png") }}';
-                            ucsc_a.appendChild(ucsc_img);
+                                const w = document.createElement('div');
 
-                            return copy_lsv.outerHTML + ucsc_a.outerHTML
-                        }
-                    },
-                ]
-            });
+                                const wl = document.createElement('label');
+                                wl.textContent = 'Weighted';
 
+                                const wl_cb = document.createElement('input');
+                                wl_cb.classList.add('psi-weighted');
+                                wl_cb.type = 'checkbox';
+                                if (data[1])
+                                    wl_cb.setAttribute('checked', '');
 
+                                wl.appendChild(wl_cb);
+                                w.appendChild(wl);
+
+                                form.appendChild(h);
+                                form.appendChild(w);
+
+                                return form.outerHTML
+                            }
+                        },
+                        {
+                            targets: 2,
+                            orderable: false,
+                            render: data => {
+                                const element = document.createElement('canvas');
+                                element.setAttribute('width', '200');
+                                element.setAttribute('height', '80');
+                                element.classList.add('lsv-cartoon');
+                                element.dataset.lsvType = data;
+                                return element.outerHTML
+                            }
+                        },
+                        {
+                            targets: 4,
+                            render: () => {
+                                const excl_incl = document.createElement('svg');
+                                excl_incl.classList.add('excl-incl-rect');
+                                excl_incl.setAttribute('width', '0');
+                                excl_incl.setAttribute('height', '0');
+
+                                const dpsi_violin = document.createElement('svg');
+                                dpsi_violin.classList.add('dpsi-violin');
+                                dpsi_violin.setAttribute('width', '0');
+                                dpsi_violin.setAttribute('height', '0');
+
+                                return excl_incl.outerHTML + dpsi_violin.outerHTML;
+                            }
+                        },
+                        {
+                            targets: [3, 5],
+                            orderable: false,
+                            render: data => {
+                                const compact = document.createElement('canvas');
+                                compact.classList.add('lsv-single-compact-percentiles');
+                                compact.dataset.group = data;
+
+                                const violin = document.createElement('svg');
+                                violin.classList.add('psi-violin-plot');
+                                violin.setAttribute('width', '0');
+                                violin.setAttribute('height', '0');
+                                violin.dataset.group = data;
+
+                                return compact.outerHTML + violin.outerHTML
+                            }
+                        },
+                        {
+                            targets: 6,
+                            orderable: false,
+                            render: data => {
+                                const copy_lsv = document.createElement('button');
+                                copy_lsv.textContent = 'Copy LSV';
+                                copy_lsv.classList.add('pure-button', 'copy-lsv');
+
+                                const ucsc_a = document.createElement('a');
+                                ucsc_a.href = data;
+                                ucsc_a.target = '_blank';
+                                ucsc_a.rel = "noopener noreferrer";
+                                const ucsc_img = document.createElement('img');
+                                ucsc_img.src = "{{ url_for('static', filename='img/ucsc.png') }}";
+                                ucsc_a.appendChild(ucsc_img);
+
+                                return copy_lsv.outerHTML + ucsc_a.outerHTML
+                            }
+                        },
+                    ],
+                    initComplete: function () {
+                        resolve();
+                    }
+                });
+            })
+
+        const selected_lsv_id = "{{ selected_lsv_id }}";
+        Promise.all([sgLoadPromise, lsvLoadPromise]).then(() => {
+          if(selected_lsv_id !== ""){
+                setTimeout(function(){
+                    $('.highlight').prop('checked', false);
+                    $(`.lsv[data-lsv-id="${selected_lsv_id}"] .highlight`).prop('checked', true)
+                        .get(0).scrollIntoView({behavior: 'smooth'});
+                    highlight_lsvs();
+                }, 0)
+            }
         });
 
         $('#results tbody')

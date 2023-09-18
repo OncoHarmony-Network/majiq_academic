@@ -161,6 +161,7 @@ gene_fieldnames = ('id', 'name', 'strand', 'chromosome')
 junc_fieldnames = ('gene_id', 'start', 'end', 'has_reads', 'annotated', 'is_simplified', 'is_constitutive')
 junc_reads_fieldnames = ('reads', 'experiment_name')
 exon_fieldnames = ('gene_id', 'start', 'end', 'annotated_start', 'annotated_end', 'annotated')
+transcript_exon_fieldnames = ('gene_id', 'transcript_id', 'start', 'end')
 ir_fieldnames = ('gene_id', 'start', 'end', 'has_reads', 'annotated', 'is_simplified', 'is_constitutive')
 ir_reads_fieldnames = ('reads', 'experiment_name')
 alt_starts_fieldnames = ('coordinate',)
@@ -271,6 +272,48 @@ class Junctions(SpliceGraphSQL):
 
         return self._iter_results(query, junc_reads_fieldnames)
 
+    def junction_reads_exp_opt(self, gene_id):
+        """
+        for a junction and a set of experiment names, get a list of reads.
+        :param junction: junction dictionary
+        :param experiment_names: list of experiment names
+        :return: list of reads dictionaries
+        """
+        q_s = '''
+            SELECT reads, experiment_name, junction_start, junction_end
+            FROM junction_reads
+            WHERE junction_gene_id=?
+            '''
+        query = self.conn.execute(q_s, (gene_id,))
+        res = {}
+
+        for reads, expname, start, end in query:
+            res[(expname, start, end)] = reads
+        return res
+
+    def junction_reads_sums(self, gene_id, groups):
+        """
+        Efficient selection for only combined groups of experiments
+        Groups should be an dict where each item is the list of experiments in that group
+        """
+
+        res = {}
+        for group, exps in groups.items():
+            res[group] = {}
+            exps_q = ','.join("'" + e + "'" for e in exps)
+
+            q_s = f'''
+                WITH a as (select * from junction_reads 
+                where junction_gene_id = ? and experiment_name in ({exps_q}) 
+                )
+                select sum(reads), junction_start, junction_end from a group by junction_start, junction_end
+                '''
+            query = self.conn.execute(q_s, (gene_id,))
+
+            for reads, start, end in query:
+                res[group][(start, end)] = reads
+        return res
+
 
 class IntronRetentions(SpliceGraphSQL):
     def intron_retentions(self, gene_id, omit_simplified=False):
@@ -316,6 +359,43 @@ class IntronRetentions(SpliceGraphSQL):
         query = self.conn.execute(q_s, itemgetter('start', 'end', 'gene_id')(ir))
 
         return self._iter_results(query, ir_reads_fieldnames)
+
+    def intron_retention_reads_exp_opt(self, gene_id):
+
+        q_s = '''
+            SELECT reads, experiment_name, intron_retention_start, intron_retention_end
+            FROM intron_retention_reads
+            WHERE intron_retention_gene_id=?
+            '''
+        query = self.conn.execute(q_s, (gene_id,))
+        res = {}
+
+        for reads, expname, start, end in query:
+            res[(expname, start, end)] = reads
+        return res
+
+    def intron_retention_reads_sums(self, gene_id, groups):
+        """
+        Efficient selection for only combined groups of experiments
+        Groups should be an dict where each item is the list of experiments in that group
+        """
+
+        res = {}
+        for group, exps in groups.items():
+            res[group] = {}
+            exps_q = ','.join("'" + e + "'" for e in exps)
+
+            q_s = f'''
+                WITH a as (select * from intron_retention_reads 
+                where intron_retention_gene_id = ? and experiment_name in ({exps_q}) 
+                )
+                select sum(reads), intron_retention_start, intron_retention_end from a group by intron_retention_start, intron_retention_end
+                '''
+            query = self.conn.execute(q_s, (gene_id,))
+
+            for reads, start, end in query:
+                res[group][(start, end)] = reads
+        return res
 
 
 class AltStarts(SpliceGraphSQL):

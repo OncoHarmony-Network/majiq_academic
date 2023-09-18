@@ -192,24 +192,59 @@ function draw_pairwise_plot(main_svg){
         $(main_svg.node()).children('g').attr('transform', `translate(40, ${5 + max_y})`);
     }
 
+function max_strlen_from_arr(arr){
+    let maxtrlen = 0;
+    for(let s of arr){
+        maxtrlen = Math.max(maxtrlen, s.length);
+    }
+    return maxtrlen;
+}
+
 class Violin {
     constructor(violin_data) {
         this.data = violin_data;
         this.violin_width = 75;
         this.violin_pad = 5;
+        this.violin_label_tilt = 0;
+        this.top_padding = 5;
+        this.top_labels_padding = 0;
+        this.x_axis_shift = 0;
+        this.psi_label_offset_x = 0;
+        this.psi_label_offset_y = 8;
+        this.psi_label_tilt = 0;
+        this.right_padding = 0;
+        this.max_label_length = 20;
+        this.height_offset = 0;
+
+
+        if(violin_data.group_names && violin_data.group_names.length * (this.violin_width + this.violin_pad) > window.innerWidth * 0.7){
+            this.violin_width = ((window.innerWidth * 0.7) / violin_data.group_names.length) - this.violin_pad;
+            this.violin_label_tilt = 30;
+            this.top_labels_padding = 7.5 * Math.sin(this.violin_label_tilt * Math.PI / 180) * Math.min(this.max_label_length, max_strlen_from_arr(violin_data.group_names));
+            this.right_padding = 7.5 * Math.cos(this.violin_label_tilt * Math.PI / 180) * Math.min(this.max_label_length, max_strlen_from_arr(violin_data.group_names));
+            //this.x_axis_shift = -1 * this.violin_width;
+            if(true){
+                this.psi_label_tilt = 90;
+                this.psi_label_offset_x = -11;
+                this.psi_label_offset_y = 18;
+                this.top_padding = 14;
+                this.height_offset = 56;
+            }
+        }
+
         this.violin_height = 135;
         // this.x_axis_height = 125;
         this.x_axis_height = 20;
         this.y_axis_width = 40;
-        this.top_padding = 5;
+
     };
 
     get svg_height() {
-        return this.violin_height + this.x_axis_height + this.top_padding
+        return this.violin_height + this.x_axis_height + this.height_offset;
     }
 
     get svg_width() {
-        return this.y_axis_width + this.violin_count * (this.violin_width + this.violin_pad)
+        return this.y_axis_width + this.violin_count * (this.violin_width + this.violin_pad) + this.right_padding;
     }
 
     psi(svg) {
@@ -242,7 +277,8 @@ class Violin {
 
         this.draw_x_axis(g, data.group_means[group]);
         this.draw_psi_y_axis(g);
-        this.box_plots(g, data.group_bins[group])
+        this.box_plots(g, data.group_bins[group]);
+        this.draw_zero_line(g, data.group_bins[group]);
     }
 
     multipsi(svg) {
@@ -259,13 +295,13 @@ class Violin {
 
 
         if(junc_idx === 0)
-            svg.setAttribute('height', this.svg_height + 10);
+            svg.setAttribute('height', this.svg_height + 10 + this.top_padding + this.top_labels_padding );
 
         const g = d3.select(svg)
                 .append('g');
 
         if(junc_idx === 0)
-            g.attr('transform', `translate(${this.y_axis_width}, ${this.top_padding+10})`);
+            g.attr('transform', `translate(${this.y_axis_width}, ${10 + this.top_padding + this.top_labels_padding })`);
         else
             g.attr('transform', `translate(${this.y_axis_width}, ${this.top_padding})`);
 
@@ -289,7 +325,8 @@ class Violin {
             this.draw_names_above(g, this.data.group_names);
         this.draw_x_axis(g, this.data.group_means[junc_idx]);
         this.draw_psi_y_axis(g);
-        this.box_plots(g, this.data.group_bins[junc_idx])
+        this.box_plots(g, this.data.group_bins[junc_idx]);
+        this.draw_zero_line(g, this.data.group_bins[junc_idx]);
 
 
     }
@@ -342,7 +379,8 @@ class Violin {
         }
         this.draw_x_axis(g, data.means.map(n => n.toFixed(3)));
         this.draw_dpsi_y_axis(g);
-        this.box_plots(g, data.bins)
+        this.box_plots(g, data.bins);
+        this.draw_zero_line(g, data.bins);
 
     }
 
@@ -390,6 +428,7 @@ class Violin {
         this.swarm(g2, color);
         this.draw_x_axis(g, data.group_names);
         this.draw_view_icons(g, data.group_names);
+        this.draw_zero_line(g, data.group_names);
         //this.pairwise_plot_triggers(g);
     }
 
@@ -425,6 +464,9 @@ class Violin {
 
         const area = d3.area()
             .curve(d3.curveCatmullRom)
+            .defined(function(d) {
+                return d > 0.001;
+            })
             // .defined(function (d) {
             //     if (d > (x.domain()[0]))
             //         return d;
@@ -709,7 +751,7 @@ class Violin {
         svg
             .append('g')
             .attr('class', 'x-axis')
-            .attr('transform', 'translate(0, -5)')
+            .attr('transform', `translate(${this.x_axis_shift}, -5)`)
             .selectAll('text')
             .data(x_axis_data)
             .enter()
@@ -719,22 +761,21 @@ class Violin {
             .text(d => {
                 try {
                     return parseFloat(d.toPrecision(3))
-                } catch (TypeError) {
-                    const max_length = 20;
-                    if (d.length > max_length) {
-                        d = d.slice(0, max_length - 3) + '...'
+                } catch (TypeError) {                    
+                    if (d.length > this.max_label_length) {
+                        d = d.slice(0, this.max_label_length - 3) + '...'
                     }
                     return d
                 }
             })
             .each((d, i, a) => {
                 const el = a[i];
-                if (d.length > 20) {
+                if (this.violin_label_tilt !== 0) {
                     el.setAttribute('x', (this.violin_width + this.violin_pad) * (i + .45));
                     el.setAttribute("data-x", (this.violin_width + this.violin_pad) * (i + .45));
                     el.setAttribute("data-orig-x", (this.violin_width + this.violin_pad) * (i + .45));
                     el.setAttribute('y', 0);
-                    el.setAttribute('transform', `rotate(90,${a[i].getAttribute('x')},${a[i].getAttribute('y')})`);
+                    el.setAttribute('transform', `rotate(${-this.violin_label_tilt},${a[i].getAttribute('x')},${a[i].getAttribute('y')})`);
                     el.setAttribute('text-anchor', 'left');
 
                 } else {
@@ -746,6 +787,25 @@ class Violin {
                 }
                 el.setAttribute('data-group-idx', i)
             })
+    }
+
+    draw_zero_line(svg, x_axis_data) {
+        var self = this;
+        var chain = svg
+            .append('g')
+            .attr('class', 'zero-line-grp')
+            .append('svg')
+            .style('overflow', 'visible')
+            .attr('class', 'zero-line')
+            .append('line')
+            .attr("stroke", "black")
+            .attr("stroke-width", "1.5px")
+            .attr("x1", 0)
+            .attr("y1", this.violin_height)
+            .attr("x2", (this.violin_width +  this.violin_pad) * x_axis_data.length)
+            .attr("y2", this.violin_height);
+
+
     }
 
     draw_x_axis(svg, x_axis_data) {
@@ -776,7 +836,7 @@ class Violin {
             }
 
             chain = chain
-            .attr('y', this.svg_height - this.x_axis_height + 6)
+            .attr('y', this.svg_height - this.x_axis_height + 6 - this.top_padding - this.height_offset)
             .append('text')
             .attr('font-size', 12)
             .attr('textLength', d =>{
@@ -787,11 +847,10 @@ class Violin {
             .attr('lengthAdjust', "spacingAndGlyphs")
             .text(d => {
                 try {
-                    return parseFloat(d.toPrecision(3))
+                    return d.toPrecision(3)
                 } catch (TypeError) {
-                    const max_length = 20;
-                    if (d.length > max_length) {
-                        d = d.slice(0, max_length - 3) + '...'
+                    if (d.length > this.max_label_length) {
+                        d = d.slice(0, this.max_label_length - 3) + '...'
                     }
                     return d
                 }
@@ -808,11 +867,13 @@ class Violin {
                 //     el.setAttribute('text-anchor', 'left');
                 //
                 // } else {
-                    el.setAttribute('x', (this.violin_width + this.violin_pad) * (i + .5));
-                    el.setAttribute("data-x", (this.violin_width + this.violin_pad) * (i + .5));
-                    el.setAttribute("data-orig-x", (this.violin_width + this.violin_pad) * (i + .5));
-                    el.setAttribute('y', this.svg_height - this.x_axis_height + 10);
+                let x = (this.violin_width + this.violin_pad) * (i + .5) + this.psi_label_offset_x;
+                    el.setAttribute('x', x);
+                    el.setAttribute("data-x", x);
+                    el.setAttribute("data-orig-x", x);
+                    el.setAttribute('y', this.svg_height - this.x_axis_height + 10 + this.psi_label_offset_y - this.top_padding - this.height_offset);
                     el.setAttribute('text-anchor', 'middle');
+                    el.setAttribute('transform', `rotate(${this.psi_label_tilt},${parseFloat(a[i].getAttribute('x')) + this.psi_label_offset_x},${parseFloat(a[i].getAttribute('y')) + this.psi_label_offset_y})`);
                 //                }
                 el.setAttribute('textLength', '40px')
                 el.setAttribute('data-group-idx', i)

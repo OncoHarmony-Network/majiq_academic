@@ -296,7 +296,7 @@
                     </div>
                     <div class="pure-control-group">
                         <label for="junction-reads-filter">Reads Filter</label>
-                        <input id="junction-reads-filter" type="checkbox" checked>
+                        <input id="junction-reads-filter" type="checkbox" {% if not disable_reads_filter %}checked{% endif %}>
                     </div>
                     <div class="junction-filter pure-control-group">
                         <label for="reads-greater-than">Reads Greater Than</label>

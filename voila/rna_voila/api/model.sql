@@ -80,6 +80,14 @@ CREATE TABLE exon (
   CHECK (annotated IN (0, 1))
 );
 
+CREATE TABLE transcript_exon (
+  gene_id         VARCHAR NOT NULL,
+  transcript_id   VARCHAR NOT NULL,
+  start           INTEGER NOT NULL,
+  "end"           INTEGER NOT NULL,
+  PRIMARY KEY (gene_id, start, "end", transcript_id)
+);
+
 CREATE TABLE intron_retention (
   gene_id   VARCHAR NOT NULL,
   start     INTEGER NOT NULL,
@@ -122,13 +130,16 @@ CREATE TABLE gene (
 CREATE INDEX `alt_end_p` ON `alt_end` ( `gene_id` ASC, `coordinate` ASC );
 CREATE INDEX `alt_start_p` ON `alt_start` ( `gene_id` ASC, `coordinate` ASC );
 CREATE INDEX `exon_p` ON `exon` ( `gene_id` ASC, `start` ASC, `end` ASC );
+CREATE INDEX `transcript_exon_p` ON `transcript_exon` ( `gene_id` ASC, `transcript_id` ASC);
 CREATE INDEX `experiment_p` ON `experiment` ( `name` ASC );
 CREATE INDEX `file_version_p` ON `file_version` ( `id` ASC );
 CREATE INDEX `gene_overlap_p` ON `gene_overlap` ( `gene_id_1` ASC, `gene_id_2` ASC );
 CREATE INDEX `gene_p` ON `gene` ( `id` ASC );
 CREATE INDEX `genome_p` ON `genome` ( `id` );
 CREATE INDEX `intron_retention_p` ON `intron_retention` ( `gene_id` ASC, `start` ASC, `end` ASC );
+CREATE INDEX `intron_retention_reads_p2` ON `intron_retention_reads` (`intron_retention_gene_id`);
 CREATE INDEX `intron_retention_reads_p` ON `intron_retention_reads` ( `experiment_name` ASC, `intron_retention_gene_id` ASC, `intron_retention_start` ASC, `intron_retention_end` ASC );
 CREATE INDEX `junction_p` ON `junction` ( `gene_id` ASC, `start` ASC, `end` ASC );
 CREATE INDEX `junction_reads_p` ON `junction_reads` ( `experiment_name` ASC, `junction_gene_id` ASC, `junction_start` ASC, `junction_end` ASC );
+CREATE INDEX `junction_reads_p2` ON `junction_reads` ( `junction_gene_id` );
 

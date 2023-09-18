@@ -159,69 +159,82 @@
             });
         });
 
-        json_ajax('{{ url_for("main.splice_graph", gene_id=gene.id) }}').then(gene => {
-            const sgs = new SpliceGraphs('.splice-graph-container', {
-                gene: gene,
-                remove_img: '{{ url_for('static', filename='img/remove.svg')}}',
-                remove_fn: event => {
-                    const sg = event.target.closest('.splice-graph');
-                    send_ajax('{{ url_for('main.psi_splice_graphs') }}', {'remove': [sg.dataset.group, sg.dataset.experiment]})
-                        .then(() => {
-                            sg.remove();
-                            SpliceGraphTools._populate_sg_form();
-                        });
-                },
-                download_img: '{{ url_for('static', filename='img/download.svg')}}'
-            });
+        let highlight_lsvs = null;
+        const sgLoadPromise = new Promise((resolve, reject) => {
 
-            const highlight_lsvs = () => {
-                const hl_data = Array.from(document.querySelectorAll('.highlight-form'))
-                    .map(f => {
-                        const lsv_id = f.closest('.lsv').dataset.lsvId;
-                        const highlight = f.querySelector('.highlight').checked;
-                        const weighted = f.querySelector('.psi-weighted').checked;
-                        return [lsv_id, highlight, weighted];
+            json_ajax('{{ url_for("main.splice_graph", gene_id=gene.id) }}').then(gene => {
+                json_ajax('{{ url_for("main.transcripts", gene_id=gene.id) }}').then(transcripts => {
+                    const sgs = new SpliceGraphs('.splice-graph-container', {
+                        gene: gene,
+                        transcripts: transcripts,
+                        remove_img: '{{ url_for('static', filename='img/remove.svg')}}',
+                        remove_fn: event => {
+                            const sg = event.target.closest('.splice-graph');
+                            send_ajax('{{ url_for('main.psi_splice_graphs') }}', {'remove': [sg.dataset.group, sg.dataset.experiment]})
+                                .then(() => {
+                                    sg.remove();
+                                    SpliceGraphTools._populate_sg_form();
+                                });
+                        },
+                        download_img: "{{ url_for('static', filename='img/download.svg')}}"
                     });
 
-                send_ajax('{{ url_for("main.lsv_highlight") }}', hl_data).then(lsvs => {
-                    sgs.highlight(lsvs);
-                })
+                    highlight_lsvs = () => {
+                        const hl_data = Array.from(document.querySelectorAll('.highlight-form'))
+                            .map(f => {
+                                const lsv_id = f.closest('.lsv').dataset.lsvId;
+                                const highlight = f.querySelector('.highlight').checked;
+                                const weighted = f.querySelector('.psi-weighted').checked;
+                                return [lsv_id, highlight, weighted];
+                            });
 
-            };
+                        send_ajax('{{ url_for("main.lsv_highlight") }}', hl_data).then(lsvs => {
+                            sgs.highlight(lsvs);
+                        })
 
-            sgs.init_create().then(s => new SpliceGraphTools(s, gene, highlight_lsvs));
-            const plotOpts = new PlotOptions(gene);
+                    };
 
-            document.querySelectorAll('.highlight-form')
-                .forEach(h => h.addEventListener('change', (event) => {
-                    const input = event.target;
-                    if (input.classList.contains('psi-weighted') && input.checked) {
-                        input
-                            .closest('.highlight-form')
-                            .querySelectorAll('.highlight')
-                            .forEach(hl => hl.checked = true)
-                    }
-
-                    highlight_lsvs();
-                }));
-
-            $('.lsv-table tbody').on('mouseenter', 'tr', function(){
-                const hl_data = [[$(this).closest('.lsv-table').data('lsv-id'), true, false]];
-                const junc_coords = $(this).children().eq(0).text().split('-').map(function (x){return parseInt(x, 10)});
-                send_ajax('{{ url_for("main.lsv_highlight") }}', hl_data).then(lsvs => {
-                    $.each(lsvs, function(i, v){
-                        lsvs[i]['junctions'] = lsvs[i]['junctions'].filter(function(junc){return junc[0] === junc_coords[0] && junc[1] === junc_coords[1]});
-                        if (!(lsvs[i]['intron_retention'][0] === junc_coords[0] && lsvs[i]['intron_retention'][1] === junc_coords[1])){
-                            lsvs[i]['intron_retention'] = [];
-                        }
+                    sgs.init_create().then(s => {
+                        new SpliceGraphTools(s, gene, highlight_lsvs);
+                        sgs.create_transcripts();
+                        resolve();
                     });
-                    sgs.highlight(lsvs);
-                })
-            }).on('mouseleave', 'tr', function(){
-                highlight_lsvs();
-            });
+                    const plotOpts = new PlotOptions(gene);
 
+                    document.querySelectorAll('.highlight-form')
+                        .forEach(h => h.addEventListener('change', (event) => {
+                            const input = event.target;
+                            if (input.classList.contains('psi-weighted') && input.checked) {
+                                input
+                                    .closest('.highlight-form')
+                                    .querySelectorAll('.highlight')
+                                    .forEach(hl => hl.checked = true)
+                            }
+
+                            highlight_lsvs();
+                        }));
+
+                    // $('.lsv-table tbody').on('mouseenter', 'tr', function(){
+                    //     const hl_data = [[$(this).closest('.lsv-table').data('lsv-id'), true, false]];
+                    //     const junc_coords = $(this).children().eq(0).text().split('-').map(function (x){return parseInt(x, 10)});
+                    //     send_ajax('{{ url_for("main.lsv_highlight") }}', hl_data).then(lsvs => {
+                    //         $.each(lsvs, function(i, v){
+                    //             lsvs[i]['junctions'] = lsvs[i]['junctions'].filter(function(junc){return junc[0] === junc_coords[0] && junc[1] === junc_coords[1]});
+                    //             if (!(lsvs[i]['intron_retention'][0] === junc_coords[0] && lsvs[i]['intron_retention'][1] === junc_coords[1])){
+                    //                 lsvs[i]['intron_retention'] = [];
+                    //             }
+                    //         });
+                    //         sgs.highlight(lsvs);
+                    //     })
+                    // }).on('mouseleave', 'tr', function(){
+                    //     highlight_lsvs();
+                    // });
+
+                });
+            });
         });
+
+
 
         document.querySelectorAll('.lsv-cartoon').forEach(async function (c) {
             const lsv_id = c.closest('.lsv').dataset.lsvId;
@@ -396,80 +409,100 @@
                 subtree: true
             });
 
-        document.querySelectorAll('.lsv-table')
-            .forEach(async function (lsv_table) {
-                $(lsv_table).DataTable({
-                    autoWidth: false,
-                    processing: true,
-                    serverSide: true,
-                    paging: false,
-                    searching: false,
-                    info: false,
-                    ajax: {
-                        url: '{{ url_for('main.summary_table') }}',
-                        data: d => {
-                            d['lsv_id'] = lsv_table.dataset.lsvId;
-                            d['stat_name'] = document.querySelector('input[name=stat-name]:checked').value;
+        const lsvLoadPromise = new Promise((resolve, reject) => {
+            document.querySelectorAll('.lsv-table')
+                .forEach(async function (lsv_table) {
+                    $(lsv_table).DataTable({
+                        autoWidth: false,
+                        processing: true,
+                        serverSide: true,
+                        paging: false,
+                        searching: false,
+                        info: false,
+                        ajax: {
+                            url: '{{ url_for('main.summary_table') }}',
+                            data: d => {
+                                d['lsv_id'] = lsv_table.dataset.lsvId;
+                                d['stat_name'] = document.querySelector('input[name=stat-name]:checked').value;
+                            },
+                            type: 'POST'
                         },
-                        type: 'POST'
-                    },
-                    columnDefs: [
-                        {
-                            targets: 1,
-                            sortable: false,
-                            render: data => {
-                                const violin = new Violin(data);
-                                const element = document.createElement('svg');
-                                element.classList.add('psi-violin-plot');
-                                element.setAttribute('width', '0');
-                                element.setAttribute('height', '0');
+                        columnDefs: [
+                            {
+                                targets: 1,
+                                sortable: false,
+                                render: data => {
+                                    const violin = new Violin(data);
+                                    const element = document.createElement('svg');
+                                    element.classList.add('psi-violin-plot');
+                                    element.setAttribute('width', '0');
+                                    element.setAttribute('height', '0');
 
-                                violin.heterogen(element);
+                                    violin.heterogen(element);
 
 
-                                const dlBtn = document.createElement('img');
-                                dlBtn.classList.add('violin-download');
-                                dlBtn.src = '/static/img/download.svg';
-                                dlBtn.height = 16;
+                                    const dlBtn = document.createElement('img');
+                                    dlBtn.classList.add('violin-download');
+                                    dlBtn.src = '{{ url_for("static", filename="img/download.svg") }}';
+                                    dlBtn.height = 16;
 
-                                const container = document.createElement('div');
-                                container.appendChild(element);
-                                container.appendChild(dlBtn);
+                                    const container = document.createElement('div');
+                                    container.appendChild(element);
+                                    container.appendChild(dlBtn);
 
 
-                                return container.outerHTML
-                            }
-                        },
-                        {
-                            targets: 2,
-                            sortable: false,
-                            render: data => {
-                                const heatmap = new HeatMap(data);
-                                const element = document.createElement('svg');
-
-                                heatmap.lsv_id = lsv_table.dataset.lsvId;
-                                heatmap.plot(element);
-
-                                if($('#dPSI-cutoff').val() !== DEFAULT_DPSI_MAXVAL){
-                                    update_heatmap_scale();
+                                    return container.outerHTML
                                 }
+                            },
+                            {
+                                targets: 2,
+                                sortable: false,
+                                render: data => {
+                                    const heatmap = new HeatMap(data);
+                                    const element = document.createElement('svg');
 
-                                const dlBtn = document.createElement('img');
-                                dlBtn.classList.add('heatmap-download');
-                                dlBtn.src = '/static/img/download.svg';
-                                dlBtn.height = 16;
+                                    heatmap.lsv_id = lsv_table.dataset.lsvId;
+                                    heatmap.plot(element);
 
-                                const container = document.createElement('div');
-                                container.appendChild(element);
-                                container.appendChild(dlBtn);
+                                    if($('#dPSI-cutoff').val() !== DEFAULT_DPSI_MAXVAL){
+                                        update_heatmap_scale();
+                                    }
 
-                                return container.outerHTML;
+                                    const dlBtn = document.createElement('img');
+                                    dlBtn.classList.add('heatmap-download');
+                                    dlBtn.src = '{{ url_for("static", filename="img/download.svg") }}';
+                                    dlBtn.height = 16;
 
+                                    const container = document.createElement('div');
+                                    container.appendChild(element);
+                                    container.appendChild(dlBtn);
+
+                                    return container.outerHTML;
+
+                                }
                             }
+                        ],
+                        initComplete: function(){
+                            resolve()
+
+
                         }
-                    ]
+                    })
                 })
             });
+
+        const selected_lsv_id = "{{ selected_lsv_id }}";
+        Promise.all([sgLoadPromise, lsvLoadPromise]).then(() => {
+          if(selected_lsv_id !== ""){
+                setTimeout(function(){
+                    $('.highlight').prop('checked', false);
+                    $(`.lsv[data-lsv-id="${selected_lsv_id}"] .highlight`).prop('checked', true)
+                        .get(0).scrollIntoView({behavior: 'smooth'});
+                    highlight_lsvs();
+                }, 0)
+            }
+        });
+
 
 
         $('#results tbody')

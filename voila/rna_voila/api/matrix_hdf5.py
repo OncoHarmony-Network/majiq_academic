@@ -15,11 +15,30 @@ from rna_voila.vlsv import collapse_matrix, matrix_area
 def lsv_id_to_gene_id(lsv_id):
     return ':'.join(lsv_id.split(':')[:-2])
 
+opened_voila_files = {}
+
+def _open_hdf5(filename, mode):
+    return h5py.File(filename, mode, libver='latest')
+
+def open_hdf5(filename, mode):
+    from rna_voila.config import ViewConfig
+    from rna_voila.voila_log import voila_log
+    config = ViewConfig()
+
+    filename = str(filename)
+    if mode == 'r':
+        if config.memory_map_hdf5:
+            if filename not in opened_voila_files:
+                voila_log().debug(f'memory mapping {filename}')
+                opened_voila_files[filename] = h5py.File(filename, mode, libver='latest', driver='core', backing_store=False)
+            return opened_voila_files[filename]
+
+    return _open_hdf5(filename, mode)
 
 class MatrixHdf5:
     LSVS = 'lsvs'
 
-    def __init__(self, filename, mode='r', voila_file=True, voila_tsv=False):
+    def __init__(self, filename, mode='r', voila_file=True, voila_tsv=False, pre_config=False):
         """
         Access voila's HDF5 file.
 
@@ -28,15 +47,17 @@ class MatrixHdf5:
         """
         self.voila_tsv = voila_tsv
         self.voila_file = voila_file
+        self.mode = mode
         self.dt = h5py.special_dtype(vlen=str)
         self._group_names = None
         self._tsv_writer = None
         self._tsv_file = None
         self._filename = filename
         self._prior = None
+        self._pre_config = pre_config
 
         if voila_file:
-            self.h = h5py.File(filename, mode, libver='latest')
+            self.h = _open_hdf5(filename, mode) if pre_config else open_hdf5(filename, mode)
 
 
     def __enter__(self):
@@ -45,9 +66,24 @@ class MatrixHdf5:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
+    def has_index(self):
+        return 'index' in self.h
+
+    def write_index(self, index, hashval):
+        if 'index' in self.h:
+            del self.h['index']
+        if 'input_hash' in self.h:
+            del self.h['input_hash']
+        self.h.create_dataset('index', index.shape, data=index)
+        self.h.create_dataset("input_hash", (1,), dtype="S40", data=(hashval.encode('utf-8'),))
+
+    def get_index(self):
+        return self.h['index'][()]
+
     def close(self):
         if self.voila_file:
-            self.h.close()
+            if self.mode != 'r' or self._pre_config:
+                self.h.close()
 
         if self.voila_tsv:
             self._tsv_file.close()

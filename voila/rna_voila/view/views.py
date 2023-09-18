@@ -256,6 +256,7 @@ def gene_view(summary_template, gene_id, view_matrix, **kwargs):
         })
 
         kwargs['gene'] = gene
+        kwargs['disable_reads_filter'] = ViewConfig().disable_reads
 
         return render_template(summary_template, **kwargs)
 
@@ -295,7 +296,7 @@ def _generate_ucsc_link(request_args, matrix_type):
 
     # http://view-localhost:5002/generate_ucsc_link?lsv_id=ENSMUSG00000028760:s:138177917-138178010
     if 'gene_id' in request_args:
-        gene_id = request.args['gene_id']
+        gene_id = request_args['gene_id']
         with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
 
             gene = sg.gene(gene_id)
@@ -309,9 +310,14 @@ def _generate_ucsc_link(request_args, matrix_type):
             return redirect(link)
     elif 'lsv_id' in request_args:
         with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, matrix_type() as m:
-            gene_id = request.args['lsv_id'].split(':')[0]
+
+            parts = request_args['lsv_id'].split(':')
+            parts.pop(-1)
+            parts.pop(-1)
+            gene_id = ':'.join(parts)
 
             gene = sg.gene(gene_id)
+
 
             exons = sg.exons(gene_id)
             junctions = sg.junctions(gene_id)

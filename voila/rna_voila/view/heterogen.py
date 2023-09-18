@@ -139,7 +139,8 @@ def gene(gene_id):
                                group_names=m.group_names,
                                ucsc=ucsc,
                                stat_names=m.stat_names,
-                               analysis_type='heterogen')
+                               analysis_type='heterogen',
+                               selected_lsv_id=request.args.get('lsv_id', ''))
 
 
 @bp.route('/lsv-data', methods=('POST',))
@@ -221,7 +222,11 @@ def nav(gene_id):
 def splice_graph(gene_id):
     with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewHeterogens() as v:
         exp_names = v.splice_graph_experiment_names
-        gd = sg.gene_experiment(gene_id, exp_names)
+        if ViewConfig().disable_reads:
+            gd = sg.gene_experiment(gene_id, [])
+            exp_names = [['splice graph']]
+        else:
+            gd = sg.gene_experiment(gene_id, exp_names)
         gd['group_names'] = v.group_names
         gd['experiment_names'] = exp_names
         return jsonify(gd)
@@ -436,5 +441,10 @@ def copy_lsv(lsv_id):
 @bp.route('/generate_ucsc_link', methods=('GET',))
 def generate_ucsc_link():
     return views._generate_ucsc_link(request.args, ViewHeterogens)
+
+@bp.route('/transcripts/<gene_id>', methods=('POST', 'GET'))
+def transcripts(gene_id):
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
+        return jsonify(sg.gene_transcript_exons(gene_id))
 
 app.register_blueprint(bp)

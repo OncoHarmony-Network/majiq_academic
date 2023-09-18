@@ -62,8 +62,14 @@ def nav(gene_id):
 @bp.route('/splice-graph/<gene_id>', methods=('POST', 'GET'))
 def splice_graph(gene_id):
     with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
+
         exp_names = [sg.experiment_names]
-        gd = sg.gene_experiment(gene_id, exp_names)
+        if ViewConfig().disable_reads:
+            gd = sg.gene_experiment(gene_id, [])
+            exp_names = [['splice graph']]
+        else:
+            gd = sg.gene_experiment(gene_id, exp_names)
+
         gd['experiment_names'] = exp_names
         gd['group_names'] = ['splice graph']
         return jsonify(gd)
@@ -93,11 +99,12 @@ def splice_graph_combined(gene_id):
             sr = sg.gene_experiment(gene_id, [])
             gd = sgl.combined_gene(gene_id, sr)
 
-            # if not sg.experiment_names:
-            #     for exon in gd['exons']:
-            #         exon['color'] =
-
             return jsonify(gd)
+
+@bp.route('/transcripts/<gene_id>', methods=('POST', 'GET'))
+def transcripts(gene_id):
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
+        return jsonify(sg.gene_transcript_exons(gene_id))
 
 @bp.route('/psi-splice-graphs', methods=('POST',))
 def psi_splice_graphs():
@@ -106,7 +113,10 @@ def psi_splice_graphs():
             sg_init = session['psi_init_splice_graphs']
         except KeyError:
             try:
-                sg_init = [['splice graph', sg.experiment_names[0]]]
+                if ViewConfig().disable_reads:
+                    sg_init = [['splice graph', 'splice graph']]
+                else:
+                    sg_init = [['splice graph', sg.experiment_names[0]]]
             except IndexError:
                 sg_init = [['splice graph', 'no experiment']]
 

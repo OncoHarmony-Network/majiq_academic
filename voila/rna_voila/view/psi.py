@@ -89,7 +89,8 @@ def gene(gene_id):
                                lsv_data=lsv_data,
                                group_names=m.group_names,
                                ucsc=ucsc,
-                               filter_exon_numbers=filter_exon_numbers
+                               filter_exon_numbers=filter_exon_numbers,
+                               selected_lsv_id=request.args.get('lsv_id', '')
                                )
 
 
@@ -169,13 +170,6 @@ def add_psis(gd):
                 except KeyError:
                     junc_psis[junc_start] = {junc_end: psimean}
 
-            # print(psi.group_means)
-            # print(psi.junctions)
-            # print(dir(psi))
-            # lsv_type = psi.lsv_type
-            #
-            # lsv_exons = sg.lsv_exons(gene_id, psi.junctions)
-            # start, end = views.lsv_boundries(lsv_exons)
     gd['junction_psis'] = junc_psis
     return gd
 
@@ -183,10 +177,17 @@ def add_psis(gd):
 def splice_graph(gene_id):
     with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg, ViewPsis() as v:
         exp_names = v.splice_graph_experiment_names
-        gd = sg.gene_experiment(gene_id, exp_names)
+        if ViewConfig().disable_reads:
+            gd = sg.gene_experiment(gene_id, [])
+            exp_names = [['splice graph']]
+            gd['group_names'] = ["splice graph"]
+        else:
+            gd = sg.gene_experiment(gene_id, exp_names)
+            gd['group_names'] = v.group_names
+
         gd['experiment_names'] = exp_names
-        gd['group_names'] = v.group_names
         gd = add_psis(gd)
+
         return jsonify(gd)
 
 @bp.route('/splice-graph/lr/<gene_id>', methods=('POST', 'GET'))
@@ -234,13 +235,10 @@ def summary_table(gene_id):
         for idx, record, records in dt.callback():
             lsv_id = record['lsv_id'].decode('utf-8')
             psi = v.lsv(lsv_id)
-
             lsv_type = psi.lsv_type
 
             gene = sg.gene(gene_id)
             lsv_exons = sg.lsv_exons(gene_id, psi.junctions)
-
-
             start, end = views.lsv_boundries(lsv_exons)
             ucsc = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
 
@@ -267,7 +265,10 @@ def psi_splice_graphs():
         try:
             sg_init = session['psi_init_splice_graphs']
         except KeyError:
-            sg_init = [[v.group_names[0], v.splice_graph_experiment_names[0][0]]]
+            if ViewConfig().disable_reads:
+                sg_init = [["splice graph", "splice graph"]]
+            else:
+                sg_init = [[v.group_names[0], v.splice_graph_experiment_names[0][0]]]
 
         json_data = request.get_json()
 
@@ -495,6 +496,11 @@ def copy_lsv(lsv_id):
 @bp.route('/generate_ucsc_link', methods=('GET',))
 def generate_ucsc_link():
     return views._generate_ucsc_link(request.args, ViewPsis)
+
+@bp.route('/transcripts/<gene_id>', methods=('POST', 'GET'))
+def transcripts(gene_id):
+    with ViewSpliceGraph(omit_simplified=session.get('omit_simplified', False)) as sg:
+        return jsonify(sg.gene_transcript_exons(gene_id))
 
 
 

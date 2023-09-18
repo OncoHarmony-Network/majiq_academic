@@ -1,10 +1,11 @@
 import json
 from itertools import chain
 
-import h5py
+
 import numpy as np
 
 from rna_voila import constants
+from rna_voila.api.matrix_hdf5 import MatrixHdf5
 from rna_voila.api.view_matrix import ViewHeterogens, ViewDeltaPsi, ViewPsi, ViewPsis, ViewHeterogen
 from rna_voila.api.view_splice_graph import ViewSpliceGraph
 from rna_voila.config import ViewConfig
@@ -14,6 +15,7 @@ from rna_voila.voila_log import voila_log
 from multiprocessing import Pool, Manager
 import time
 import hashlib
+import os
 
 lsv_filters = ['a5ss', 'a3ss', 'exon_skipping', 'target', 'source', 'binary', 'complex', 'intron_retention']
 psi_keys = ['lsv_id', 'gene_id', 'gene_name'] + lsv_filters
@@ -65,21 +67,26 @@ class Index:
         :return:
         """
 
-        with h5py.File(voila_file, 'a') as h:
-            index_in_h = 'index' in h
-
-            if remove_index and index_in_h:
-                voila_log().info('Removing index from HDF5')
-                del h['index']
-
-            # voila_files = ViewConfig().voila_files
-
-            # if 'input_hash' in h:
-            #     prior = h.get('input_hash')[0].decode('utf-8')
-            #     new = Index._get_files_hash(voila_files)
-            #     index_in_h = (prior == new)
-
-            return index_in_h
+        if os.path.exists(voila_file):
+            with MatrixHdf5(voila_file, 'r', pre_config=True) as m:
+                return m.has_index()
+        return False
+        #
+        # with h5py.File(voila_file, 'a') as h:
+        #     index_in_h = 'index' in h
+        #
+        #     if remove_index and index_in_h:
+        #         voila_log().info('Removing index from HDF5')
+        #         del h['index']
+        #
+        #     # voila_files = ViewConfig().voila_files
+        #
+        #     # if 'input_hash' in h:
+        #     #     prior = h.get('input_hash')[0].decode('utf-8')
+        #     #     new = Index._get_files_hash(voila_files)
+        #     #     index_in_h = (prior == new)
+        #
+        #     return index_in_h
 
     @staticmethod
     def _get_files_hash(voila_files):
@@ -106,17 +113,12 @@ class Index:
         :return: None
         """
         voila_index = np.array(voila_index, dtype=np.dtype(dtype))
-
         voila_files = ViewConfig().voila_files
 
-        with h5py.File(voila_file, 'a') as h:
-            if 'index' in h:
-                del h['index']
-            if 'input_hash' in h:
-                del h['input_hash']
-            h.create_dataset('index', voila_index.shape, data=voila_index)
+        with MatrixHdf5(voila_file, 'a', pre_config=True) as m:
             hashval = Index._get_files_hash(voila_files)
-            h.create_dataset("input_hash", (1,), dtype="S40", data=(hashval.encode('utf-8'),))
+            m.write_index(voila_index, hashval)
+
 
     @staticmethod
     def _get_voila_index_file():
@@ -246,7 +248,7 @@ class Index:
                         print("Indexing LSV IDs: %d / %d" % (size, work_size))
                         time.sleep(2)
 
-                log.info('Writing index: ' + voila_file)
+
                 voila_index = voila_index.get()
 
             else:
@@ -257,6 +259,7 @@ class Index:
                         voila_index.append(self._heterogen_pool_add_index(args))
 
             dtype = self._create_dtype(voila_index)
+            log.info('Writing index: ' + voila_file)
             self._write_index(voila_file, voila_index, dtype)
         else:
             log.info('Using index: ' + voila_file)
@@ -341,7 +344,7 @@ class Index:
                         print("Indexing LSV IDs: %d / %d" % (size, work_size))
                         time.sleep(2)
 
-                log.info('Writing index: ' + voila_file)
+
                 voila_index = voila_index.get()
 
             else:
@@ -352,6 +355,7 @@ class Index:
                         voila_index.append(self._deltapsi_pool_add_index(args))
 
             dtype = self._create_dtype(voila_index)
+            log.info('Writing index: ' + voila_file)
             self._write_index(voila_file, voila_index, dtype)
         else:
             log.info('Using index: ' + voila_file)
@@ -420,7 +424,7 @@ class Index:
                         print("Indexing LSV IDs: %d / %d" % (size, work_size))
                         time.sleep(2)
 
-                log.info('Writing index: ' + voila_file)
+
                 voila_index = voila_index.get()
 
             else:
@@ -431,6 +435,7 @@ class Index:
                         voila_index.append(self._psi_pool_add_index(args))
 
             dtype = self._create_dtype(voila_index)
+            log.info('Writing index: ' + voila_file)
             self._write_index(voila_file, voila_index, dtype)
         else:
             log.info('Using index: ' + voila_file)
@@ -451,11 +456,10 @@ class Index:
         except AttributeError:
             pass
 
-        with h5py.File(index_file, 'r') as h:
+        with MatrixHdf5(index_file, 'r') as m:
 
             try:
-
-                for row in h['index'][()]:
+                for row in m.get_index():
                     if gene_id is None or gene_id == row[1]:
                         yield dict(zip(keys, row))
 

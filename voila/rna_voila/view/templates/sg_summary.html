@@ -18,28 +18,31 @@
         json_ajax('{{ url_for("main.splice_graph", gene_id=gene.id) }}').then(gene => {
             json_ajax('{{ url_for("main.splice_graph_lr", gene_id=gene.id) }}').then(gene_lr => {
                 json_ajax('{{ url_for("main.splice_graph_combined", gene_id=gene.id) }}').then(gene_c => {
+                    json_ajax('{{ url_for("main.transcripts", gene_id=gene.id) }}').then(transcripts => {
 
-
-                    const sgs = new SpliceGraphs('.splice-graph-container', {
-                        gene: gene,
-                        gene_lr: gene_lr,
-                        gene_c: gene_c,
-                        remove_img: '{{ url_for('static', filename='img/remove.svg')}}',
-                        remove_fn
-                :
-                    event => {
-                        const sg = event.target.closest('.splice-graph');
-                        send_ajax('{{ url_for('main.psi_splice_graphs') }}', {'remove': [sg.dataset.group, sg.dataset.experiment]}).then(() => {
-                            sg.remove();
-                            SpliceGraphTools._populate_sg_form();
+                        const sgs = new SpliceGraphs('.splice-graph-container', {
+                            gene: gene,
+                            gene_lr: gene_lr,
+                            gene_c: gene_c,
+                            remove_img: "{{ url_for('static', filename='img/remove.svg')}}",
+                            remove_fn:
+                                event => {
+                                    const sg = event.target.closest('.splice-graph');
+                                    send_ajax("{{ url_for('main.psi_splice_graphs') }}", {'remove': [sg.dataset.group, sg.dataset.experiment]}).then(() => {
+                                        sg.remove();
+                                        SpliceGraphTools._populate_sg_form();
+                                    });
+                                }
                         });
-                    }
-                });
 
-                    sgs.init_create().then(s => new SpliceGraphTools(s, gene));
+                        sgs.init_create().then(s => {
+                            new SpliceGraphTools(s, gene)
+                            sgs.create_transcripts();
+                        });
+
+                    })
                 })
             })
-
         });
 
 
