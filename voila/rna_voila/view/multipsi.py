@@ -37,6 +37,29 @@ def toggle_simplified():
     session['omit_simplified'] = not session['omit_simplified']
     return jsonify({'ok':1})
 
+@bp.route('/reset-group-settings', methods=('POST',))
+def reset_group_settings():
+    del session['group_order_override']
+    del session['group_display_name_override']
+    del session['group_visibility']
+    return jsonify({'ok':1})
+
+@bp.route('/update-group-order', methods=('POST',))
+def update_group_list():
+    session['group_order_override'] = request.json
+    return jsonify({'ok':1})
+
+@bp.route('/update-group-display-names', methods=('POST',))
+def update_group_display_names():
+    session['group_display_name_override'] = request.json
+    return jsonify({'ok':1})
+
+@bp.route('/update-group-visibility', methods=('POST',))
+def update_group_visibility():
+    session['group_visibility'] = request.json
+    return jsonify({'ok':1})
+
+
 @bp.route('/gene/<gene_id>/')
 def gene(gene_id):
 
@@ -86,6 +109,7 @@ def gene(gene_id):
         return views.gene_view('multipsi_summary.html', gene_id, ViewPsis,
                                lsv_data=lsv_data,
                                group_names=m.group_names,
+                               analysis_type='multipsi',
                                ucsc=ucsc,
                                filter_exon_numbers=filter_exon_numbers
                                )
@@ -237,14 +261,18 @@ def lsv_data(lsv_id):
             'exon_number': exon_number
         })
 
+def rename_groups(group_names):
+
+    if not session.get('group_display_name_override', None):
+        return group_names
+
+    group_names_new = [session['group_display_name_override'][n] for n in group_names]
+    return group_names_new
+
 @bp.route('/violin-data', methods=('POST',))
 @bp.route('/violin-data/<lsv_id>', methods=('POST',))
 def violin_data(lsv_id):
     config = ViewConfig()
-    if 'hidden_idx' in request.form:
-        hidden_idx = sorted([int(x) for x in request.form['hidden_idx'].split(',')], reverse=True)
-    else:
-        hidden_idx = []
 
     """
     Expected workflow:
@@ -253,14 +281,26 @@ def violin_data(lsv_id):
     Then, For each voila file, we look for that LSV and check if the junction is available in it.
     If so, we  add group bins / means to that table row
     """
-    with ViewPsis() as v:
+
+    with ViewPsis(group_order_override=session.get('group_order_override', None)) as v:
+    #with ViewPsis() as v:
         exp_names = v.experiment_names
         grp_names = v.group_names
-        files = config.voila_files[:]
+        #print(grp_names, session.get('group_order_override', None))
+
+        if 'group_visibility' in session:
+            # this is reversed because we are removing these indexes from lists later, and that only works
+            # consistently if we do it backwards
+            hidden_idx_unsorted = [grp_names.index(name) for name in session['group_visibility'] if session['group_visibility'][name] is False]
+            hidden_idx = sorted([int(x) for x in hidden_idx_unsorted], reverse=True)
+        else:
+            hidden_idx = []
+
+        #files = config.voila_files[:]
         for idx in hidden_idx:
             grp_names.pop(idx)
             exp_names.pop(idx)
-            files.pop(idx)
+            #files.pop(idx)
 
         all = v.lsv(lsv_id)
 
@@ -281,12 +321,19 @@ def violin_data(lsv_id):
             'group_means': [ <junc1> , <junc2> ]
             'group_means': [ [ <group1>, <group2> ] , <junc2> ]
             """
+
+            # o_grp_names = grp_names.copy()
+            # o_exp_names = exp_names.copy()
+            # for _idx in hidden_idx:
+            #     del o_grp_names[_idx]
+            #     del o_exp_names[_idx]
+
             table_data.append([
                 _junc,
                 {
                     'junction_idx': i,
                     'junction_name': _junc,
-                    "group_names": grp_names,
+                    "group_names": rename_groups(grp_names),
                     "experiment_names": exp_names,
                     'group_means': [[] for _ in range(len(all.junctions.tolist()))],
                     'group_bins': [[] for _ in range(len(all.junctions.tolist()))],
@@ -295,7 +342,7 @@ def violin_data(lsv_id):
 
             for j, grp in enumerate(grp_names):
 
-                with ViewPsi(files[j]) as m:
+                with ViewPsi(config.groups_to_voilas[grp]) as m:
 
                     try:
                         psi = m.lsv(lsv_id)

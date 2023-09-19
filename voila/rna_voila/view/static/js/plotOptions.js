@@ -100,7 +100,6 @@ class PlotOptions {
                     return $.trim($(this).text());
                 }).get();
 
-                console.log(elem_list)
                 send_ajax('/update-group-order', elem_list).then(ret => {
                     $('.lsv-table').DataTable().ajax.reload();
                 })

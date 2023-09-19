@@ -126,6 +126,8 @@ class ViewMulti:
         Group names for this set of het voila files.
         :return: list
         """
+        if hasattr(self, 'group_order_override') and self.group_order_override:
+            return self.group_order_override
         config = ViewConfig()
         grp_names = []
         for f in config.voila_files:
@@ -339,48 +341,6 @@ class _ViewMulti:
         """
         return self._get_prop('junctions')
 
-class ViewPsis(ViewMulti):
-
-    def __init__(self, voila_file=None):
-        if voila_file != None:
-            print("Warning, view multipsi calling with specific voila file not supported, using all voila inputs")
-        super().__init__(ViewPsi)
-
-    class _ViewPsis(_ViewMulti):
-        def __init__(self, matrix_hdf5, lsv_id):
-            super().__init__(matrix_hdf5, lsv_id, ViewPsi)
-
-        @property
-        def all_group_means(self):
-            """
-            Get group means from all files as a dict of group_name:means
-            """
-            return self._get_prop_multi('group_means')
-
-        @property
-        def group_means(self):
-            """
-            Finds first file with this specific lsv id and gets group means. This does NOT consider any other
-            input files upon finding the first one with the lsv id
-            """
-            return self._get_prop('group_means', dict)
-
-        @property
-        def group_bins(self):
-            """
-            Finds first file with this specific lsv id and gets group means. This does NOT consider any other
-            input files upon finding the first one with the lsv id
-            """
-            return self._get_prop('group_bins', dict)
-
-    def lsv(self, lsv_id):
-        """
-        Get view heterogens object for this lsv id.
-        :param lsv_id: lsv id
-        :return: view heterogens object
-        """
-        return self._ViewPsis(self, lsv_id)
-
 
 
 
@@ -557,6 +517,51 @@ class ViewDeltaPsi(DeltaPsi, ViewMatrix):
         return self._ViewDeltaPsi(self, lsv_id)
 
 
+class ViewPsis(ViewMulti):
+
+    def __init__(self, voila_file=None, group_order_override=None):
+        if voila_file != None:
+            print("Warning, view multipsi calling with specific voila file not supported, using all voila inputs")
+        if group_order_override:
+            group_order_override = group_order_override.copy()
+        self.group_order_override = group_order_override
+        super().__init__(ViewPsi)
+
+    class _ViewPsis(_ViewMulti):
+        def __init__(self, matrix_hdf5, lsv_id):
+            super().__init__(matrix_hdf5, lsv_id, ViewPsi)
+
+        @property
+        def all_group_means(self):
+            """
+            Get group means from all files as a dict of group_name:means
+            """
+            return self._get_prop_multi('group_means')
+
+        @property
+        def group_means(self):
+            """
+            Finds first file with this specific lsv id and gets group means. This does NOT consider any other
+            input files upon finding the first one with the lsv id
+            """
+            return self._get_prop('group_means', dict)
+
+        @property
+        def group_bins(self):
+            """
+            Finds first file with this specific lsv id and gets group means. This does NOT consider any other
+            input files upon finding the first one with the lsv id
+            """
+            return self._get_prop('group_bins', dict)
+
+    def lsv(self, lsv_id):
+        """
+        Get view heterogens object for this lsv id.
+        :param lsv_id: lsv id
+        :return: view heterogens object
+        """
+        return self._ViewPsis(self, lsv_id)
+
 
 
 
@@ -566,6 +571,8 @@ class ViewHeterogens(ViewMulti):
     def __init__(self, voila_file=None, group_order_override=None):
         if voila_file != None:
             print("Warning, view heterogen calling with specific voila file not supported, using all voila inputs")
+        if group_order_override:
+            group_order_override = group_order_override.copy()
         self.group_order_override = group_order_override
         super().__init__(ViewHeterogen)
 

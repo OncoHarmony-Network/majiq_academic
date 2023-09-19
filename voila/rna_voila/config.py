@@ -15,7 +15,7 @@ from rna_voila.voila_log import voila_log
 
 _log_keys = ['logger', 'silent']
 _sys_keys = ['nproc', 'debug']
-_global_keys = ['analysis_type', 'memory_map_hdf5']
+_global_keys = ['analysis_type', 'memory_map_hdf5', 'groups_to_voilas']
 
 _ViewConfig = namedtuple('ViewConfig', _global_keys + _sys_keys + _log_keys + ['voila_file', 'voila_files',
                                         'splice_graph_file',
@@ -72,7 +72,7 @@ _LongReadsConfig.__new__.__defaults__ = (None,) * len(_LongReadsConfig._fields)
 
 # global config variable to act as the singleton instance of the config.
 this_config = None
-
+this_group_names_to_voila_files = None
 
 def find_splice_graph_file(vs):
     """
@@ -114,7 +114,7 @@ def find_splice_graph_file(vs):
     return sg_file.resolve()
 
 
-def find_voila_files(vs, group_order_override=None):
+def find_voila_files(vs):
     """
     Find all voila files in files and directories.
     :param vs: list of files and directories.
@@ -132,14 +132,13 @@ def find_voila_files(vs, group_order_override=None):
             try:
                 with Matrix(v, pre_config=True) as m:
                     voila_files.append(v)
-                    if group_order_override:
-                        voila_files_to_group_names[v] = m.group_names[0]
+                    voila_files_to_group_names[v] = m.group_names[0]
             except OSError:
                 voila_log().warning('Error opening voila file %s , skipping this file' % str(v))
                 pass
 
         elif v.is_dir():
-            x, x2 = find_voila_files(v.iterdir(), group_order_override)
+            x, x2 = find_voila_files(v.iterdir())
             voila_files = [*voila_files, *x]
             voila_files_to_group_names.update(x2)
 
@@ -150,6 +149,7 @@ def find_voila_files(vs, group_order_override=None):
     voila_files.sort()
 
     return voila_files, voila_files_to_group_names
+
 
 def reorder_voila_files(voila_files, group_order_override, voila_files_to_group_names):
     try:
@@ -237,7 +237,9 @@ def write(args):
 
 
         group_order_override = getattr(args, "group_order_override", None)
-        voila_files, voila_files_to_group_names = find_voila_files(args.files, group_order_override=group_order_override)
+        voila_files, voila_files_to_group_names = find_voila_files(args.files)
+        global this_group_names_to_voila_files
+        this_group_names_to_voila_files = {v:k for k, v in voila_files_to_group_names.items()}
         if group_order_override:
             voila_files = reorder_voila_files(voila_files, group_order_override, voila_files_to_group_names)
         if args.func.__name__ in ("Filter", "Classify", 'splitter', 'recombine'):
@@ -267,11 +269,9 @@ def write(args):
     # Get filters from arguments, add them to the appropriate section, and remove them from arguments.
     for lsv_filter in ['lsv_types', 'lsv_ids', 'gene_ids', 'gene_names']:
         if lsv_filter in attrs and attrs[lsv_filter]:
-            try:
-                config_parser.set(filters, lsv_filter, '\n'.join(attrs[lsv_filter]))
-            except configparser.NoSectionError:
+            if not config_parser.has_section(filters):
                 config_parser.add_section(filters)
-                config_parser.set(filters, lsv_filter, '\n'.join(attrs[lsv_filter]))
+            config_parser.set(filters, lsv_filter, '\n'.join(attrs[lsv_filter]))
 
             del attrs[lsv_filter]
 
@@ -356,6 +356,9 @@ class ViewConfig:
             if settings.get('memory_map_hdf5', False) and not 'index_file' in settings:
                 voila_log().critical('To use hdf5 memory map performance mode, you must specify --index-file as well')
                 sys.exit(1)
+
+
+            settings['groups_to_voilas'] = this_group_names_to_voila_files
 
             this_config = _ViewConfig(**{**files, **settings})
 

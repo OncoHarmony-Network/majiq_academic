@@ -163,10 +163,7 @@
             <li class="pure-menu-item">
                 <span class="tools-menu-btn pure-menu-link" id="splice-graph-menu-btn">Splice Graph</span>
             </li>
-            {#            <li class="pure-menu-item">#}
-            {#                <span class="tools-menu-btn lsv-tools pure-menu-link">LSV</span>#}
-            {#            </li>#}
-            {% if analysis_type == 'heterogen' %}
+            {% if analysis_type in ('heterogen', 'multipsi') %}
                 <li class="pure-menu-item">
                     <span class="tools-menu-btn pure-menu-link" id="plot-options-menu-btn">Plot Options</span>
                 </li>
