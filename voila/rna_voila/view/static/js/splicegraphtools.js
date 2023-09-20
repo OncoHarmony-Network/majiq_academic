@@ -38,6 +38,16 @@ class SpliceGraphTools {
             }
         };
 
+        $("#splice-graph-toggle-btn").click(function (){
+            if($('.content').hasClass('content-maximized')){
+                $('.top, .gene-header').slideDown()
+                $('.content').removeClass('content-maximized')
+            }else{
+                $('.top, .gene-header').slideUp()
+                $('.content').addClass('content-maximized')
+            }
+        });
+
         // handling click outside of our options hides them
         $("body").click(function(event){
             if($('#splice-graph-menu-btn').hasClass('pure-menu-active')){
