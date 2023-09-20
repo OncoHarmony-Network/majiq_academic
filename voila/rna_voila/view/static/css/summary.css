@@ -22,7 +22,7 @@ table {
     background-color: #205bb0;
     color: white;
     position: absolute;
-    z-index: 3
+    z-index: 12
 }
 
 .tools-menu.hide-tools-menu {
@@ -35,7 +35,7 @@ table {
     transition: all 100ms ease;
     background-color: #c0d8ee;
     color: black;
-    z-index: 2;
+    z-index: 11;
     position: absolute;
     width: 100%;
     top: 45px;
@@ -276,7 +276,7 @@ form.het-highlight-form label {
     height: 4px;
     width: 100%;
     cursor: ns-resize;
-    z-index: 100;
+    z-index: 10;
 }
 
 .pure-form .upper-fieldset-group{
