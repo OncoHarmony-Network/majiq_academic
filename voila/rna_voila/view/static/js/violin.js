@@ -324,7 +324,7 @@ class Violin {
 
         if(junc_idx === 0)
             this.draw_names_above(g, this.data.group_names, this.data.experiment_names);
-        this.draw_x_axis(g, this.data.group_means[junc_idx], data.experiment_names);
+        this.draw_x_axis(g, this.data.group_means[junc_idx], this.data.experiment_names);
         this.draw_psi_y_axis(g);
         this.box_plots(g, this.data.group_bins[junc_idx]);
         this.draw_zero_line(g, this.data.group_bins[junc_idx]);
