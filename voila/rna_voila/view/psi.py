@@ -156,7 +156,10 @@ def add_psis(gd):
         for lsv_id in lsv_list:
             # print(lsv_id)
             psi = v.lsv(lsv_id)
-            for psimean, junc_coord in zip(psi.group_means[grp_name], psi.junctions):
+            psi_means = dict(psi.group_means)
+            if not grp_name in psi_means:
+                continue
+            for psimean, junc_coord in zip(psi_means[grp_name], psi.junctions):
 
                 junc_start, junc_end = int(junc_coord[0]), int(junc_coord[1])
                 try:
