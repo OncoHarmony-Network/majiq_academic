@@ -116,16 +116,15 @@
                                 $(s).hide();
                                 violin.psi(s);
 
-                                const lr_lsv = new Lsv(lr_lsv_data);
-                                const lr_violin = new Violin(lr_lsv_data.lsv);
+                                if(lr_lsv_data){
+                                    const lr_lsv = new Lsv(lr_lsv_data);
+                                    const lr_violin = new Violin(lr_lsv_data.lsv);
 
-                                const lr_s = n.querySelector('.lr-psi-violin-plot');
-                                lr_lsv.draw_lsv_compact_stack_bars(n.querySelector('.lr-lsv-single-compact-percentiles'));
-                                $(lr_s).hide();
-                                lr_violin.psi(lr_s);
-
-
-
+                                    const lr_s = n.querySelector('.lr-psi-violin-plot');
+                                    lr_lsv.draw_lsv_compact_stack_bars(n.querySelector('.lr-lsv-single-compact-percentiles'));
+                                    $(lr_s).hide();
+                                    lr_violin.psi(lr_s);
+                                }
 
                             });
 
@@ -156,17 +155,7 @@
                     childList: true,
                 });
 
-            $('#results').DataTable({
-                autoWidth: false,
-                processing: true,
-                serverSide: true,
-                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-                order: [[1, "asc"]],
-                ajax: {
-                    url: '{{ url_for('main.summary_table', gene_id=gene.id) }}',
-                    type: 'POST'
-                },
-                columnDefs: [
+            let columnDefs = [
                     {
                         targets: 0,
                         render: data => {
@@ -235,7 +224,10 @@
 
                             return compact.outerHTML + violin.outerHTML
                         }
-                    },
+                    }
+                ]
+            if(longread_enabled){
+                columnDefs.push(
                     {
                         targets: 4,
                         sortable: false,
@@ -252,27 +244,42 @@
 
                             return compact.outerHTML + violin.outerHTML
                         }
-                    },
-                    {
-                        targets: 5,
-                        sortable: false,
-                        render: data => {
-                            const btn = document.createElement('button');
-                            btn.textContent = 'Copy LSV';
-                            btn.classList.add('pure-button', 'copy-lsv');
-
-                            const ucsc_a = document.createElement('a');
-                            ucsc_a.href = data;
-                            ucsc_a.target = '_blank';
-                            ucsc_a.rel = "noopener noreferrer";
-                            const ucsc_img = document.createElement('img');
-                            ucsc_img.src = "{{ url_for('static', filename="img/ucsc.png") }}";
-                            ucsc_a.appendChild(ucsc_img);
-
-                            return btn.outerHTML + ucsc_a.outerHTML
-                        }
                     }
-                ]
+                )
+            }
+            columnDefs.push(
+                {
+                    targets: longread_enabled ? 5 : 4,
+                    sortable: false,
+                    render: data => {
+                        const btn = document.createElement('button');
+                        btn.textContent = 'Copy LSV';
+                        btn.classList.add('pure-button', 'copy-lsv');
+
+                        const ucsc_a = document.createElement('a');
+                        ucsc_a.href = data;
+                        ucsc_a.target = '_blank';
+                        ucsc_a.rel = "noopener noreferrer";
+                        const ucsc_img = document.createElement('img');
+                        ucsc_img.src = "{{ url_for('static', filename='img/ucsc.png') }}";
+                        ucsc_a.appendChild(ucsc_img);
+
+                        return btn.outerHTML + ucsc_a.outerHTML
+                    }
+                }
+            )
+
+            $('#results').DataTable({
+                autoWidth: false,
+                processing: true,
+                serverSide: true,
+                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+                order: [[1, "asc"]],
+                ajax: {
+                    url: "{{ url_for('main.summary_table', gene_id=gene.id) }}",
+                    type: 'POST'
+                },
+                columnDefs: columnDefs
             });
             });
             });
@@ -314,7 +321,9 @@
                     <th>LSV ID</th>
                     <th>LSV Type</th>
                     <th>Ψ per Junction</th>
-                    <th>LR Ψ per Junction</th>
+                    {% if config["long_read_file"] %}
+                        <th>LR Ψ per Junction</th>
+                    {% endif %}
                     <th>Links</th>
                 </tr>
                 </thead>
