@@ -263,14 +263,14 @@
                     if(n.nodeType === 3){
                         return;
                     }
-                    // n.querySelectorAll('.violin-download')
-                    //     .forEach(h => {
-                    //         h.onclick = (e) => {
-                    //             const main_svg = $(h).siblings('.psi-violin-plot')[0].outerHTML;
-                    //             const lsv_table = $(h).closest('.lsv-table').eq(0).data('lsv-id');
-                    //             download_svg_elem(main_svg, `violin-${lsv_table}.svg`);
-                    //         }
-                    //     })
+                    n.querySelectorAll('.violin-download')
+                        .forEach(h => {
+                            h.onclick = (e) => {
+                                const main_svg = $(h).siblings('.psi-violin-plot')[0].outerHTML;
+                                const lsv_table = $(h).closest('.lsv-table').eq(0).data('lsv-id');
+                                download_svg_elem(main_svg, `violin-${lsv_table}.svg`);
+                            }
+                        })
                     const tool_tip = document.querySelector('.violin-tool-tip');
 
                     n.querySelectorAll('.psi-violin-plot')
@@ -356,6 +356,16 @@
                                     element.setAttribute('height', '0');
 
                                     violin.multipsi(element);
+
+                                    const dlBtn = document.createElement('img');
+                                    dlBtn.classList.add('violin-download');
+                                    dlBtn.src = '{{ url_for("static", filename="img/download.svg") }}';
+                                    dlBtn.height = 16;
+
+                                    const container = document.createElement('div');
+                                    container.appendChild(element);
+                                    container.appendChild(dlBtn);
+
                                     if ($('#groups-display option').length === 0) {
                                         $.each(data.group_names, function (i, v) {
                                             $('#groups-display').append(`<option value="${v}" selected>${v}</option>`);
@@ -377,7 +387,7 @@
                                         });
                                     }
 
-                                    return element.outerHTML
+                                    return container.outerHTML
                                 }
                             }
                         ],

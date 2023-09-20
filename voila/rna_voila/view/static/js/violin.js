@@ -820,7 +820,7 @@ class Violin {
             .selectAll('text')
             .data(x_axis_data)
             .enter()
-            .append('svg')
+            .append('g')
             .style('overflow', 'visible')
             .attr('class', 'x-axis-grp')
 
@@ -863,6 +863,9 @@ class Violin {
             .attr('data-num-experiments', (group, i) => {
                 return experiment_names ? experiment_names[i].length : '';
             })
+            .attr('transform', `rotate(${this.psi_label_tilt},14, 8)`)
+            .attr('text-anchor', 'middle')
+            .attr('dominant-baseline', 'central')
             .select(function() { return this.parentNode; })
             .each((d, i, a) => {
                 const el = a[i];
@@ -881,7 +884,8 @@ class Violin {
                     el.setAttribute("data-orig-x", x);
                     el.setAttribute('y', this.svg_height - this.x_axis_height + 10 + this.psi_label_offset_y - this.top_padding - this.height_offset);
                     el.setAttribute('text-anchor', 'middle');
-                    el.setAttribute('transform', `rotate(${this.psi_label_tilt},${parseFloat(a[i].getAttribute('x')) + this.psi_label_offset_x},${parseFloat(a[i].getAttribute('y')) + this.psi_label_offset_y})`);
+                    el.setAttribute('transform', `translate(${parseFloat(a[i].getAttribute('x')) + this.psi_label_offset_x},${parseFloat(a[i].getAttribute('y')) + this.psi_label_offset_y})`)
+                    //el.setAttribute('transform', `rotate(${this.psi_label_tilt},${parseFloat(a[i].getAttribute('x')) + this.psi_label_offset_x},${parseFloat(a[i].getAttribute('y')) + this.psi_label_offset_y})`);
                 //                }
                 el.setAttribute('textLength', '40px')
                 el.setAttribute('data-group-idx', i)
