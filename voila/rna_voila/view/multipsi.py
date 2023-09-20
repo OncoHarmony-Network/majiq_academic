@@ -13,6 +13,7 @@ from rna_voila.view.datatables import DataTables
 from rna_voila.view.forms import LsvFiltersForm
 from rna_voila.config import ViewConfig
 from rna_voila.exceptions import LsvIdNotFoundInVoilaFile, LsvIdNotFoundInAnyVoilaFile, GeneIdNotFoundInVoilaFile
+from rna_voila.view.psi import add_psis
 
 
 app, bp = views.get_bp(__name__)
@@ -177,6 +178,7 @@ def splice_graph(gene_id):
             gd['group_names'] = v.group_names
 
         gd['experiment_names'] = exp_names
+        gd = add_psis(gd)
         return jsonify(gd)
 
 

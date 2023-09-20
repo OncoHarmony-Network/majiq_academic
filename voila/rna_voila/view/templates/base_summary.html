@@ -224,7 +224,7 @@
             <div style="display: inline-block;">
                 <canvas width="800px" height="40px" class="legend"></canvas>
             </div>
-            <div class="view-toggles">
+            <div class="view-toggles" {% if not config["long_read_file"] %}style="display: none;"{% endif %}>
                 <label class="form-control">
                     <input id="sg-toggle-all" type="radio" name="sg-toggles" value="" checked>
                     Show All
@@ -241,7 +241,6 @@
                     <input id="sg-toggle-srlr" type="radio" name="sg-toggles" value="s,l,la,sl">
                     SR or LR Relevant
                 </label>
-
             </div>
             <div class="coordinates"></div>
         </div>
@@ -270,7 +269,7 @@
             </form>
         </div>
         <div class="pure-u-1-5">
-            <form class="splice-graph-form-lr pure-form pure-form-aligned">
+            <form class="splice-graph-form-lr pure-form pure-form-aligned" {% if not config["long_read_file"] %}style="display: none;"{% endif %}>
                 <fieldset>
                     <div class="experiments pure-control-group">
                         <label for="experiments_lr">Long Read Experiments</label>
@@ -319,7 +318,7 @@
             </form>
         </div>
         <div class="pure-u-1-5">
-            <form class="splice-graph-form pure-form pure-form-aligned">
+            <form class="splice-graph-form pure-form pure-form-aligned" {% if not config["long_read_file"] %}style="display: none;"{% endif %}>
                 <fieldset class="upper-fieldset-group">
                     <div class="pure-control-group">
                         <label style="text-align: left;font-weight: 900;">Long Reads</label>
