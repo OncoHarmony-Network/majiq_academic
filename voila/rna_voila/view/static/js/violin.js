@@ -275,6 +275,7 @@ class Violin {
             .attr('fill', (d, i) => color.brewer(i))
             .attr('fill-opacity', 1);
 
+
         this.draw_x_axis(g, data.group_means[group]);
         this.draw_psi_y_axis(g);
         this.box_plots(g, data.group_bins[group]);
@@ -322,8 +323,8 @@ class Violin {
         //this.swarm(g, color);
 
         if(junc_idx === 0)
-            this.draw_names_above(g, this.data.group_names);
-        this.draw_x_axis(g, this.data.group_means[junc_idx]);
+            this.draw_names_above(g, this.data.group_names, this.data.experiment_names);
+        this.draw_x_axis(g, this.data.group_means[junc_idx], data.experiment_names);
         this.draw_psi_y_axis(g);
         this.box_plots(g, this.data.group_bins[junc_idx]);
         this.draw_zero_line(g, this.data.group_bins[junc_idx]);
@@ -426,7 +427,7 @@ class Violin {
             .attr('transform', `translate(${this.y_axis_width}, ${this.top_padding})`);
 
         this.swarm(g2, color);
-        this.draw_x_axis(g, data.group_names);
+        this.draw_x_axis(g, data.group_names, data.experiment_names);
         this.draw_view_icons(g, data.group_names);
         this.draw_zero_line(g, data.group_names);
         //this.pairwise_plot_triggers(g);
@@ -747,7 +748,7 @@ class Violin {
 
   }
 
-    draw_names_above(svg, x_axis_data) {
+    draw_names_above(svg, x_axis_data, experiment_names) {
         svg
             .append('g')
             .attr('class', 'x-axis')
@@ -758,6 +759,9 @@ class Violin {
             .append('text')
             .attr('y', this.svg_height - this.x_axis_height + 6)
             .attr('font-size', 12)
+            .attr('data-num-experiments', (group, i) => {
+                return experiment_names[i].length;
+            })
             .text(d => {
                 try {
                     return parseFloat(d.toPrecision(3))
@@ -808,7 +812,7 @@ class Violin {
 
     }
 
-    draw_x_axis(svg, x_axis_data) {
+    draw_x_axis(svg, x_axis_data, experiment_names) {
         var self = this;
         var chain = svg
             .append('g')
@@ -819,6 +823,7 @@ class Violin {
             .append('svg')
             .style('overflow', 'visible')
             .attr('class', 'x-axis-grp')
+
 
             if(isInArr(view_type, ['het'])) {
                 chain = chain
@@ -855,6 +860,9 @@ class Violin {
                     return d
                 }
             })
+            .attr('data-num-experiments', (group, i) => {
+                return experiment_names ? experiment_names[i].length : '';
+            })
             .select(function() { return this.parentNode; })
             .each((d, i, a) => {
                 const el = a[i];
@@ -878,6 +886,7 @@ class Violin {
                 el.setAttribute('textLength', '40px')
                 el.setAttribute('data-group-idx', i)
             })
+
 
         // upon clicking the hide button
         if(!isInArr(view_type, ['multipsi', 'het'])) {

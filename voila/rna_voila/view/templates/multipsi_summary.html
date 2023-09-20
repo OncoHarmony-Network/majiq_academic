@@ -257,6 +257,73 @@
             });
         });
 
+        new MutationObserver(mutations => {
+            mutations
+                .forEach(m => m.addedNodes.forEach(n => {
+                    if(n.nodeType === 3){
+                        return;
+                    }
+                    // n.querySelectorAll('.violin-download')
+                    //     .forEach(h => {
+                    //         h.onclick = (e) => {
+                    //             const main_svg = $(h).siblings('.psi-violin-plot')[0].outerHTML;
+                    //             const lsv_table = $(h).closest('.lsv-table').eq(0).data('lsv-id');
+                    //             download_svg_elem(main_svg, `violin-${lsv_table}.svg`);
+                    //         }
+                    //     })
+                    const tool_tip = document.querySelector('.violin-tool-tip');
+
+                    n.querySelectorAll('.psi-violin-plot')
+                        .forEach(v => {
+
+                            v.querySelectorAll('.x-axis text')
+                                .forEach(c => {
+
+                                    c.onmouseover = () => {
+                                        c.style.fill = 'orange';
+                                        tool_tip.querySelector('.value').textContent = `#Samples: ${c.dataset.numExperiments}`;
+                                        tool_tip.querySelector('.sample').textContent = `Group: ${c.textContent}`;
+                                        tool_tip.querySelector('.expected').textContent = '';
+                                        tool_tip.style.display = 'block';
+                                    };
+                                    c.onmouseout = () => {
+                                        c.style.fill = null;
+                                        tool_tip.querySelector('.value').textContent = '';
+                                        tool_tip.querySelector('.sample').textContent = '';
+                                        //tool_tip.style.display = 'none';
+                                    };
+                                });
+
+                            v.querySelectorAll('.violin, .swarm-group, .x-axis')
+                                .forEach(h => {
+
+                                    h.onmouseover = () => {
+                                        const expected = $(h).data('expected');
+                                        if(expected){
+                                            tool_tip.querySelector('.expected').textContent = "E(PSI) = " + $(h).data('expected');
+                                        }
+                                        tool_tip.style.display = 'block';
+
+                                        draw_rowcol_highlight(h);
+                                    };
+
+                                    h.onmouseout = () => {
+                                        tool_tip.style.display = 'none';
+
+                                    }
+                                    h.onmousemove = (e) => {
+                                        tool_tip.style.top = (e.pageY - 90) + 'px';
+                                        tool_tip.style.left = (e.pageX + 10) + 'px';
+                                    };
+                                })
+                        });
+                }));
+        })
+            .observe(document.querySelector('.lsv-container'), {
+                childList: true,
+                subtree: true
+            });
+
         const lsvLoadPromise = new Promise((resolve, reject) => {
             document.querySelectorAll('.lsv-table')
                 .forEach(async function (lsv_table) {
@@ -349,6 +416,13 @@
 {% endblock %}
 
 {% block bottom %}
+
+    <div class="violin-tool-tip" style="display: none;">
+        <div class="sample"></div>
+        <div class="value"></div>
+        <div class="expected"></div>
+    </div>
+
     <div class="lsv-container">
         {% for lsv_id, lsv_type, exon_number, exon_number_idx, type_length_idx in lsv_data %}
             <div class="lsv" data-exon-number="{{ exon_number }}" data-lsv-id="{{ lsv_id }}" data-exon-number-idx="{{ exon_number_idx }}"

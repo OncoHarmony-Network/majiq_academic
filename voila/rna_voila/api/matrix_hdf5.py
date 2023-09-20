@@ -81,8 +81,9 @@ class MatrixHdf5:
         return self.h['index'][()]
 
     def close(self):
+        from rna_voila.config import ViewConfig
         if self.voila_file:
-            if self.mode != 'r' or self._pre_config:
+            if self._pre_config or not ViewConfig().memory_map_hdf5 or self.mode != 'r':
                 self.h.close()
 
         if self.voila_tsv:

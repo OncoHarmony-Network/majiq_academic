@@ -352,12 +352,31 @@
 
                         });
 
+                    const tool_tip = document.querySelector('.violin-tool-tip');
+                    n.querySelectorAll('.x-axis text')
+                                .forEach(c => {
+
+                                    c.onmouseover = () => {
+                                        c.style.fill = 'orange';
+                                        tool_tip.querySelector('.value').textContent = `#Samples: ${c.dataset.numExperiments}`;
+                                        tool_tip.querySelector('.sample').textContent = `Group: ${c.textContent}`;
+                                        tool_tip.querySelector('.expected').textContent = '';
+                                        tool_tip.style.display = 'block';
+                                    };
+                                    c.onmouseout = () => {
+                                        c.style.fill = null;
+                                        tool_tip.querySelector('.value').textContent = '';
+                                        tool_tip.querySelector('.sample').textContent = '';
+                                        //tool_tip.style.display = 'none';
+                                    };
+                                });
+
                     n.querySelectorAll('.psi-violin-plot')
                         .forEach(v => {
 
                             v.querySelectorAll('circle')
                                 .forEach(c => {
-                                    const tool_tip = document.querySelector('.violin-tool-tip');
+
                                     c.onmouseover = () => {
                                         c.style.fill = 'orange';
                                         tool_tip.querySelector('.value').textContent = c.dataset.mu;
@@ -373,10 +392,9 @@
                                     };
                                 });
 
-                            v.querySelectorAll('.violin, .swarm-group')
+                            v.querySelectorAll('.violin, .swarm-group, .x-axis')
                                 .forEach(h => {
 
-                                    const tool_tip = document.querySelector('.violin-tool-tip');
                                     h.onmouseover = () => {
                                         if(!$(h).closest('.psi-violin-plot').find('.pairwise-check[data-checked="true"]').length){
                                             const expected = $(h).data('expected');
