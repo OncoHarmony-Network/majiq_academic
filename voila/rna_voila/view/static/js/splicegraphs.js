@@ -127,7 +127,7 @@ class SpliceGraphs {
             junctions.push({
                 'start':exons[i].end,
                 'end':exons[i+1].start,
-                'color': 'red'
+                'color': combined_colors['ao']
             })
         }
         return junctions;
