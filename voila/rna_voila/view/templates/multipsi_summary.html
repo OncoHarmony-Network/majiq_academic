@@ -232,26 +232,6 @@
                         copy_lsv_modal(elem, '{{ url_for("main.copy_lsv") }}/' + encodeURIComponent(lsv_id))
                     });
 
-                    $('.lsv-table tbody').on('mouseenter', 'tr', function () {
-                        const hl_data = [[$(this).closest('.lsv-table').data('lsv-id'), true, false]];
-                        const junc_coords = $(this).children().eq(0).text().split(',').map(function (x) {
-                            return parseInt(x, 10)
-                        });
-                        send_ajax('{{ url_for("main.lsv_highlight") }}', hl_data).then(lsvs => {
-                            $.each(lsvs, function (i, v) {
-                                lsvs[i]['junctions'] = lsvs[i]['junctions'].filter(function (junc) {
-                                    return junc[0] === junc_coords[0] && junc[1] === junc_coords[1]
-                                });
-                                if (!(lsvs[i]['intron_retention'][0] === junc_coords[0] && lsvs[i]['intron_retention'][1] === junc_coords[1])) {
-                                    lsvs[i]['intron_retention'] = [];
-                                }
-                            });
-                            sgs.highlight(lsvs);
-                        })
-                    }).on('mouseleave', 'tr', function () {
-                        highlight_lsvs();
-                    });
-
 
                 });
             });
