@@ -104,7 +104,7 @@ class PlotOptions {
                     return $.trim($(this).text());
                 }).get();
 
-                send_ajax('/update-group-order', elem_list).then(ret => {
+                send_ajax(base_url + '/update-group-order', elem_list).then(ret => {
                     $('.lsv-table').DataTable().ajax.reload();
                 })
             },
@@ -119,7 +119,7 @@ class PlotOptions {
 
             })
 
-            send_ajax('/update-group-visibility', group_visibility).then(ret => {
+            send_ajax(base_url + '/update-group-visibility', group_visibility).then(ret => {
                 $('.lsv-table').DataTable().ajax.reload();
             })
         })));
@@ -133,7 +133,7 @@ class PlotOptions {
 
             })
 
-            send_ajax('/update-group-display-names', group_display_name_override).then(ret => {
+            send_ajax(base_url + '/update-group-display-names', group_display_name_override).then(ret => {
                 $('.lsv-table').DataTable().ajax.reload();
             })
             //$('.lsv-table').DataTable().ajax.reload();
@@ -141,7 +141,7 @@ class PlotOptions {
 
         // button for resetting these settings
         $('#resetGroupNamesButton').click(function(){
-            send_ajax('/reset-group-settings', {}).then(ret => {
+            send_ajax(base_url + '/reset-group-settings', {}).then(ret => {
                 location.reload();
             })
         })
@@ -155,7 +155,7 @@ class PlotOptions {
             $('#group-controls .drag').each(function(i, v){
                 $(v).find('dt .group-visible').prop('checked', true);
             })
-            send_ajax('/update-group-visibility', group_visibility).then(ret => {
+            send_ajax(base_url + '/update-group-visibility', group_visibility).then(ret => {
                 $('.lsv-table').DataTable().ajax.reload();
             })
         });
@@ -168,7 +168,7 @@ class PlotOptions {
             $('#group-controls .drag').each(function(i, v){
                 $(v).find('dt .group-visible').prop('checked', false);
             })
-            send_ajax('/update-group-visibility', group_visibility).then(ret => {
+            send_ajax(base_url + '/update-group-visibility', group_visibility).then(ret => {
                 $('.lsv-table').DataTable().ajax.reload();
             })
         });
