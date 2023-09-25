@@ -7,7 +7,11 @@ class PlotOptions {
         if(group_order_override){
             this.grp_names = group_order_override;
         }else{
-            this.grp_names = gene.group_names;
+            if('sortable_group_names' in gene){
+                this.grp_names = gene.sortable_group_names
+            }else{
+                this.grp_names = gene.group_names;
+            }
         }
 
         if(group_display_name_override) {

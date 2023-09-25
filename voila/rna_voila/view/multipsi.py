@@ -173,6 +173,7 @@ def splice_graph(gene_id):
             gd = sg.gene_experiment(gene_id, [])
             exp_names = [['splice graph']]
             gd['group_names'] = ["splice graph"]
+            gd['sortable_group_names'] = v.group_names
         else:
             gd = sg.gene_experiment(gene_id, exp_names)
             gd['group_names'] = v.group_names
