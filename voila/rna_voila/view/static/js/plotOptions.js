@@ -80,7 +80,7 @@ class PlotOptions {
             }
             const template = `
                 <div class="drag">
-                <dt><img class="handle" src="/static/img/drag_blue.png" title="Re-order this group"> <span>${v}</span>
+                <dt><img class="handle" src="${base_url}/static/img/drag_blue.png" title="Re-order this group"> <span>${v}</span>
                 <input type="checkbox" class="group-visible" ${visible} title="Display this group?"></dt>
                 <dd><input class="group-name-override" value="${dispname}" title="Change the display name of this group"></dd>
                 </div>`;
