@@ -852,7 +852,7 @@ class Violin {
             .attr('lengthAdjust', "spacingAndGlyphs")
             .text(d => {
                 try {
-                    return d.toPrecision(3)
+                    return d.toPrecision(3).toString().length > 5 ? d.toExponential(1) : d.toPrecision(3);
                 } catch (TypeError) {
                     if (d.length > this.max_label_length) {
                         d = d.slice(0, this.max_label_length - 3) + '...'
