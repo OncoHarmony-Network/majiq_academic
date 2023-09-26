@@ -429,8 +429,6 @@ longread_parser.add_argument('--gene-id', type=str, required=False,
 required_longread_parser = longread_parser.add_argument_group('required named arguments')
 required_longread_parser.add_argument('--lr-gtf-file', required=True, type=check_file,
                     help='path to the long read GTF file')
-required_longread_parser.add_argument('--lr-bed-file', required=True, type=check_file,
-                    help='path to the long read BED file')
 required_longread_parser.add_argument('--lr-tsv-file', required=True, type=check_file,
                     help='path to the long read TSV file')
 required_longread_parser.add_argument('-o', '--output-file', type=str, required=True,

@@ -67,7 +67,7 @@ _SplitterConfig = namedtuple('SplitterConfig', _global_keys + _sys_keys + _log_k
 _SplitterConfig.__new__.__defaults__ = (None,) * len(_SplitterConfig._fields)
 _RecombineConfig = namedtuple('RecombineConfig', _global_keys + _sys_keys + _log_keys + ['directories', 'directory'])
 _RecombineConfig.__new__.__defaults__ = (None,) * len(_RecombineConfig._fields)
-_LongReadsConfig = namedtuple('LongReadsConfig', _global_keys + _sys_keys + _log_keys + ['voila_file', 'lr_gtf_file', 'lr_bed_file', 'lr_tsv_file', 'splice_graph_file', 'output_file', 'gene_id'])
+_LongReadsConfig = namedtuple('LongReadsConfig', _global_keys + _sys_keys + _log_keys + ['voila_file', 'lr_gtf_file', 'lr_tsv_file', 'splice_graph_file', 'output_file', 'gene_id'])
 _LongReadsConfig.__new__.__defaults__ = (None,) * len(_LongReadsConfig._fields)
 
 # global config variable to act as the singleton instance of the config.

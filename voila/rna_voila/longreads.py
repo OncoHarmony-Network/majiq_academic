@@ -20,12 +20,6 @@ import h5py
 Long reads processing
 """
 
-def longReadsInputsToLongReadsVoila():
-    config = LongReadsConfig()
-    log = voila_log()
-
-    log.info("Running LR")
-
 exon = namedtuple('exon', 'start end')
 junction = namedtuple('junction', 'start end')
 _module = namedtuple('module', 'start end')
