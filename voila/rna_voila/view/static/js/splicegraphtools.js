@@ -205,7 +205,6 @@ class SpliceGraphTools {
             if(presence){
                 presence = presence.split(',');
             }
-            console.log(presence)
             this.sgs.junctions_filter(gt, lt, gtl, ltl, gtp, ltp, gtpl, ltpl, presence);
         };
 
