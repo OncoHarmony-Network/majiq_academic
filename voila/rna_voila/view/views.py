@@ -78,6 +78,10 @@ def run_service():
     port = ViewConfig().port
     host = ViewConfig().host
     run_app = get_app()
+
+    # pass general app config to templates
+    run_app.config['VOILA_CONFIG'] = ViewConfig()
+
     web_server = ViewConfig().web_server
 
 
