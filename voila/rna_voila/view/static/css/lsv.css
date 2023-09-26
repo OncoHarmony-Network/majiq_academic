@@ -14,7 +14,7 @@
     border: 2pt solid darkgrey;
 }
 
-.lsv-table .heat-map-outer, .lsv-table .heat-map, .psi-violin-plot{
+.lsv-table .heat-map-outer, .lsv-table .heat-map, .psi-violin-plot, .lr-psi-violin-plot{
     overflow: visible !important;
 }
 
