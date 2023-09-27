@@ -44,6 +44,20 @@ def beta_prior(all_junc_reads):
         bins[bins == inf] = inf_value
         bins[bins == -inf] = -inf_value
 
+        first_non_zero = next((x for x in bins if x != 0), None)
+        for i in range(len(bins)):
+            if bins[i] == 0:
+                bins[i] = first_non_zero
+            else:
+                break
+
+        last_non_zero = next((x for x in reversed(bins) if x != 0), None)
+        for i in range(len(bins)-1, -1, -1):
+            if bins[i] == 0:
+                bins[i] = last_non_zero
+            else:
+                break
+
         adj_psi.append(adjusted_psi)
         junc_bins.append(bins.tolist())
 
