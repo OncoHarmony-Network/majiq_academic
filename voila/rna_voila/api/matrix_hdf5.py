@@ -54,6 +54,13 @@ class MatrixHdf5:
         self._tsv_file = None
         self._filename = filename
         self._prior = None
+
+        try:
+            from rna_voila.config import ViewConfig
+            ViewConfig()
+        except KeyError:
+            pre_config = True
+
         self._pre_config = pre_config
 
         if voila_file:
