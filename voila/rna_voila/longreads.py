@@ -40,9 +40,9 @@ def beta_prior(all_junc_reads):
         #fig, ax = plt.subplots(1, 1)
         x = np.linspace(0,1, 40)
         bins = beta.pdf(x, a, b)
-        inf_value = bins[~np.isinf(bins)].max()
-        bins[bins == inf] = inf_value
-        bins[bins == -inf] = -inf_value
+
+        max_non_inf_value = max(value for value in bins if value != np.inf)
+        bins[bins == np.inf] = max_non_inf_value
 
         first_non_zero = next((x for x in bins if x != 0), None)
         for i in range(len(bins)):
@@ -57,7 +57,8 @@ def beta_prior(all_junc_reads):
                 bins[i] = last_non_zero
             else:
                 break
-
+            
+        bins = bins/np.sum(bins)
         adj_psi.append(adjusted_psi)
         junc_bins.append(bins.tolist())
 
