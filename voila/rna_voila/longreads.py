@@ -43,6 +43,7 @@ def beta_prior(all_junc_reads):
 
         max_non_inf_value = max(value for value in bins if value != np.inf)
         bins[bins == np.inf] = max_non_inf_value
+        bins[bins < 1.0e-20] = 1.0e-20
 
         first_non_zero = next((x for x in bins if x != 0), None)
         for i in range(len(bins)):
@@ -57,7 +58,7 @@ def beta_prior(all_junc_reads):
                 bins[i] = last_non_zero
             else:
                 break
-            
+
         bins = bins/np.sum(bins)
         adj_psi.append(adjusted_psi)
         junc_bins.append(bins.tolist())
