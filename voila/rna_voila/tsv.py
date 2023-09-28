@@ -112,9 +112,9 @@ class AnalysisTypeTsv:
 
         with view_matrix() as m:
             self.group_names = m.group_names
-            _experiment_names = m.experiment_names
+            self._experiment_names = m.experiment_names
             self.experiment_names = []
-            for group in _experiment_names:
+            for group in self._experiment_names:
                 for expname in group:
                     if expname:
                         self.experiment_names.append(expname)
@@ -503,6 +503,9 @@ class HeterogenTsv(AnalysisTypeTsv):
                 fieldnames.append(f"{exp}_junction_reads")
                 fieldnames.append(f"{exp}_intron_retention_reads")
 
+        if config.show_per_sample_psi:
+            fieldnames += [f'{exp}_psi' for i in range(len(group_names)) for exp in self._experiment_names[i] ]
+
         self.write_tsv(fieldnames)
 
     def tsv_row(self, q, e, tsv_file, fieldnames, gene_ids=None):
@@ -597,6 +600,17 @@ class HeterogenTsv(AnalysisTypeTsv):
                                     junc_reads, int_reads = experiment_reads[exp]
                                     row[f"{exp}_junction_reads"] = semicolon(junc_reads)
                                     row[f"{exp}_intron_retention_reads"] = semicolon(int_reads)
+
+                        if config.show_per_sample_psi:
+                            mu_psi = het.mu_psi
+                            for i, grp in enumerate(group_names):
+                                for j, exp in enumerate(self._experiment_names[i]):
+                                    try:
+                                        row[f"{exp}_psi"] = semicolon(mu_psi[x][i][j] for x in range(len(lsv_junctions)))
+                                    except IndexError:
+                                        row[f"{exp}_psi"] = ''
+
+
 
                         if lock:
                             lock.acquire()

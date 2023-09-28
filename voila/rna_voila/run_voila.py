@@ -87,6 +87,8 @@ required_tsv_parser.add_argument('-f', '--file-name', required=True, help="Outpu
 
 tsv_parser.add_argument('--show-read-counts', action='store_true',
                         help="Show the read counts per experiment in the TSV output")
+tsv_parser.add_argument('--show-per-sample-psi', action='store_true',
+                        help="Add columns for every sample to show individual psi values in the output")
 tsv_parser.add_argument('--ignore-inconsistent-group-errors', action='store_true',
                         help="Don't show any warnings / errors when multiple experiments with the same name, "
                              "but different experiments are analyzed")
@@ -233,6 +235,8 @@ classify_parser.add_argument('--disable-metadata', action='store_true',
                                   "If your pipeline doesn't work well with this format, this switch disables it.")
 classify_parser.add_argument('--show-read-counts', action='store_true',
                              help="Show the read counts per experiment in the TSV output")
+classify_parser.add_argument('--show-per-sample-psi', action='store_true',
+                             help="Add columns for every sample to show individual psi values in the output")
 classify_parser.add_argument('--cassettes-constitutive-column', action='store_true', help=argparse.SUPPRESS)
 classify_parser.add_argument('--junc-gene-dist-column', action='store_true', help=argparse.SUPPRESS)
 

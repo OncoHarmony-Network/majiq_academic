@@ -33,7 +33,7 @@ _TsvConfig = namedtuple('TsvConfig', _global_keys + _sys_keys + _log_keys + ['fi
                                       'ignore_inconsistent_group_errors', 'non_changing_pvalue_threshold',
                                       'non_changing_within_group_iqr',
                                       'non_changing_between_group_dpsi', 'changing_pvalue_threshold',
-                                      'changing_between_group_dpsi'])
+                                      'changing_between_group_dpsi', 'show_per_sample_psi'])
 _TsvConfig.__new__.__defaults__ = (None,) * len(_TsvConfig._fields)
 _ClassifyConfig = namedtuple('ClassifyConfig', _global_keys + _sys_keys + _log_keys + ['directory', 'voila_files',
                                       'voila_file', 'splice_graph_file',
@@ -51,7 +51,7 @@ _ClassifyConfig = namedtuple('ClassifyConfig', _global_keys + _sys_keys + _log_k
                                         'ignore_inconsistent_group_errors', 'disable_metadata',
                                         'show_read_counts', 'cassettes_constitutive_column',
                                         'non_changing_median_reads_threshold', 'permissive_event_non_changing_threshold',
-                                        'include_change_cases', 'junc_gene_dist_column'])
+                                        'include_change_cases', 'junc_gene_dist_column', 'show_per_sample_psi'])
 _ClassifyConfig.__new__.__defaults__ = (None,) * len(_ClassifyConfig._fields)
 _FilterConfig = namedtuple('FilterConfig', _global_keys + _sys_keys + _log_keys + ['directory', 'voila_files',
                                             'voila_file', 'splice_graph_file',
@@ -400,7 +400,7 @@ class TsvConfig:
                               'changing_pvalue_threshold', 'changing_between_group_dpsi']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
             for bool_key in ['show_all', 'silent', 'debug', 'strict_indexing', 'show_read_counts',
-                             'ignore_inconsistent_group_errors', 'memory_map_hdf5']:
+                             'ignore_inconsistent_group_errors', 'memory_map_hdf5', 'show_per_sample_psi']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
             filters = {}
@@ -448,7 +448,7 @@ class ClassifyConfig:
                              'putative_multi_gene_regions', 'show_all', 'keep_no_lsvs_junctions', 'output_mpe',
                              'ignore_inconsistent_group_errors', 'disable_metadata', 'show_read_counts',
                              'cassettes_constitutive_column', 'include_change_cases', 'junc_gene_dist_column',
-                             'memory_map_hdf5']:
+                             'memory_map_hdf5', 'show_per_sample_psi']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
             if settings['decomplexify_reads_threshold'] == 0:
