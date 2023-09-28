@@ -234,6 +234,22 @@ class QuantificationWriter:
                     return [fRound(sum(found_psis) / len(found_psis))]
             return f
 
+        def _het_individual_psi(voila_file, group_idx, exp_idx):
+            def f(lsv_id, edge=None):
+
+                with ViewHeterogen(voila_file) as m:
+                    try:
+                        lsv = m.lsv(lsv_id)
+                        edge_idx = self._filter_edges(edge, lsv)
+                        if edge_idx is None or edge_idx == slice(None):
+                            return None
+                        psi = lsv.mu_psi[edge_idx][group_idx][exp_idx]
+                        return [fRound(psi)]
+                    except (GeneIdNotFoundInVoilaFile, LsvIdNotFoundInVoilaFile) as e:
+                        return None
+
+            return f
+
         def _het_stats(voila_files, stat_idx):
             def f(lsv_id, edge=None):
                 for voila_file in voila_files:
@@ -436,10 +452,10 @@ class QuantificationWriter:
 
             return f
 
-        tmp = OrderedDict()
+        hdrs = OrderedDict()
         self.types2headers = {'psi':[], 'dpsi':[]}
 
-        tmp['junction_changing'] = (_junction_changing, self.config.voila_files)
+        hdrs['junction_changing'] = (_junction_changing, self.config.voila_files)
 
         # junc {'gene_id': 'ENSMUSG00000001419', 'start': 88168458, 'end': 88168632, 'has_reads': 1, 'annotated': 1, 'is_simplified': 0, 'is_constitutive': 0}
 
@@ -461,20 +477,21 @@ class QuantificationWriter:
             if self.config.show_read_counts:
                 for group, experiments in zip(group_names, experiment_names):
                     header = f'{group}_median_reads'
-                    tmp[header] = (_reads, self.config.splice_graph_file, self.graph.gene_id if self.graph else None, experiments)
+                    hdrs[header] = (_reads, self.config.splice_graph_file, self.graph.gene_id if self.graph else None, experiments)
 
             if analysis_type == constants.ANALYSIS_PSI:
 
                 for group in group_names:
                     for key in ("median_psi", "var_psi",):
                         header = "%s_%s" % (group, key)
-                        if header in tmp:
-                            tmp[header][1].append(voila_file)
+                        if header in hdrs:
+                            hdrs[header][1].append(voila_file)
                         else:
                             if key == "median_psi":
-                                tmp[header] = (_psi_psi, [voila_file])
+                                hdrs[header] = (_psi_psi, [voila_file])
                             elif key == "var_psi":
-                                tmp[header] = (_psi_var, [voila_file])
+                                hdrs[header] = (_psi_var, [voila_file])
+
 
 
             elif analysis_type == constants.ANALYSIS_HETEROGEN:
@@ -484,66 +501,70 @@ class QuantificationWriter:
                     group_idxs[group] = i
                     for key in ("median_psi",):
                         header = "%s_het_%s" % (group, key)
-                        if header in tmp:
-                            tmp[header][1].append(voila_file)
-                            tmp[header][2].append(i)
+                        if header in hdrs:
+                            hdrs[header][1].append(voila_file)
+                            hdrs[header][2].append(i)
                         else:
                             if key == "median_psi":
-                                tmp[header] = (_het_psi, [voila_file], [i])
+                                hdrs[header] = (_het_psi, [voila_file], [i])
 
-
+                if self.config.show_per_sample_psi:
+                    for i, group in enumerate(group_names):
+                        for j, exp in enumerate(experiment_names[i]):
+                            header = f"{group}_{exp}_psi"
+                            hdrs[header] = (_het_individual_psi, voila_file, i, j)
 
                 for group1, group2 in combinations(group_names, 2):
                     for key in ("median_dpsi",):
                         header = "%s-%s_het_%s" % (group1, group2, key)
-                        if header in tmp:
-                            tmp[header][1].append(voila_file)
-                            tmp[header][2].append(group_idxs[group1])
-                            tmp[header][3].append(group_idxs[group2])
+                        if header in hdrs:
+                            hdrs[header][1].append(voila_file)
+                            hdrs[header][2].append(group_idxs[group1])
+                            hdrs[header][3].append(group_idxs[group2])
                         else:
                             if key == "median_dpsi":
-                                self.dpsi_quant_idxs.append(len(tmp))
-                                tmp[header] = (_het_dpsi, [voila_file], [group_idxs[group1]], [group_idxs[group2]])
+                                self.dpsi_quant_idxs.append(len(hdrs))
+                                hdrs[header] = (_het_dpsi, [voila_file], [group_idxs[group1]], [group_idxs[group2]])
 
 
 
                     for j, key in enumerate(stat_names):
                         header = "%s-%s_het_%s" % (group1, group2, key.lower())
-                        if header in tmp:
-                            tmp[header][1].append(voila_file)
+                        if header in hdrs:
+                            hdrs[header][1].append(voila_file)
                         else:
-                            tmp[header] = (_het_stats, [voila_file], j)
+                            hdrs[header] = (_het_stats, [voila_file], j)
 
 
             else:
                 for i, group in enumerate(group_names):
                     for key in ("median_psi",):
                         header = "%s_%s" % (group, key)
-                        if header in tmp:
-                            tmp[header][1].append(voila_file)
+                        if header in hdrs:
+                            hdrs[header][1].append(voila_file)
                         else:
                             if key == "median_psi":
-                                tmp[header] = (_dpsi_psi, [voila_file], i)
+                                hdrs[header] = (_dpsi_psi, [voila_file], i)
                         self.types2headers['psi'].append(header)
 
                 changing_thresh_key = "probability_changing"
                 non_changing_thresh_key = "probability_non_changing"
                 for key in ("median_dpsi", changing_thresh_key, non_changing_thresh_key):
                     header = "%s_%s" % ('-'.join(reversed(group_names)), key)
-                    if header in tmp:
-                        tmp[header][1].append(voila_file)
+                    if header in hdrs:
+                        hdrs[header][1].append(voila_file)
                     else:
                         if key == "median_dpsi":
-                            self.dpsi_quant_idxs.append(len(tmp))
-                            tmp[header] = (_dpsi_dpsi, [voila_file])
+                            self.dpsi_quant_idxs.append(len(hdrs))
+                            hdrs[header] = (_dpsi_dpsi, [voila_file])
                             self.types2headers['dpsi'].append(header)
 
                         elif key == changing_thresh_key:
-                            tmp[header] = (_dpsi_p_change, [voila_file])
+                            hdrs[header] = (_dpsi_p_change, [voila_file])
                         elif key == non_changing_thresh_key:
-                            tmp[header] = (_dpsi_p_nonchange, [voila_file])
+                            hdrs[header] = (_dpsi_p_nonchange, [voila_file])
 
-        return tmp
+        return hdrs
 
 
 class MultiQuantWriter(QuantificationWriter):
