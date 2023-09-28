@@ -3,7 +3,7 @@ import inspect
 import sqlite3
 from collections import namedtuple
 from pathlib import Path
-import sys
+import sys, os
 from rna_voila import constants
 
 from rna_voila.api import Matrix, SpliceGraph
@@ -67,7 +67,9 @@ _SplitterConfig = namedtuple('SplitterConfig', _global_keys + _sys_keys + _log_k
 _SplitterConfig.__new__.__defaults__ = (None,) * len(_SplitterConfig._fields)
 _RecombineConfig = namedtuple('RecombineConfig', _global_keys + _sys_keys + _log_keys + ['directories', 'directory'])
 _RecombineConfig.__new__.__defaults__ = (None,) * len(_RecombineConfig._fields)
-_LongReadsConfig = namedtuple('LongReadsConfig', _global_keys + _sys_keys + _log_keys + ['voila_file', 'lr_gtf_file', 'lr_tsv_file', 'splice_graph_file', 'output_file', 'gene_id'])
+_LongReadsConfig = namedtuple('LongReadsConfig', _global_keys + _sys_keys + _log_keys + ['voila_file', 'lr_gtf_file',
+                                            'lr_tsv_file', 'splice_graph_file', 'output_file', 'gene_id',
+                                            'only_update_psi'])
 _LongReadsConfig.__new__.__defaults__ = (None,) * len(_LongReadsConfig._fields)
 
 # global config variable to act as the singleton instance of the config.
@@ -605,8 +607,18 @@ class LongReadsConfig:
                 settings[int_key] = config_parser['SETTINGS'].getint(int_key)
             for float_key in []:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
-            for bool_key in []:
+            for bool_key in ['only_update_psi']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
+
+            if settings['only_update_psi']:
+                if not settings['voila_file'] or not os.path.exists(settings['output_file']):
+                    voila_log().critical("--only-update-psi requires --voila-file and --output-file to be specified")
+                    voila_log().critical("--output-file should point to an existing .lr.voila file")
+                    sys.exit(1)
+            else:
+                if any(not settings[x] for x in ('splice_graph_file', 'lr_gtf_file', 'lr_tsv_file')):
+                    voila_log().critical("--splice-graph-file, --lr-gtf-file, -lr-tsv-file are required")
+                    sys.exit(1)
 
             filters = {}
             if config_parser.has_section('FILTERS'):

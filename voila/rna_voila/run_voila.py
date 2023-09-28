@@ -421,19 +421,22 @@ required_recombine_parser.add_argument('-d', '--directory', required=True, help=
 
 
 longread_parser = argparse.ArgumentParser(add_help=False)
-longread_parser.add_argument('--voila-file', type=check_file,
+longread_parser.add_argument('--voila-file', type=check_file, required=False,
                          help='This should be a .psi.voila file which we will match LSV definitions to to run the beta '
                               'prior. If not provided, PSI values will not be rendered for long read LSVs')
 longread_parser.add_argument('--gene-id', type=str, required=False,
                     help='Limit to a gene-id for testing')
+longread_parser.add_argument('--only-update-psi', action="store_true", required=False,
+                    help='Instead of re generating all data, only update the PSI values. Requires -o to point to an '
+                         'existing .lr.voila file, and --voila-file to be provided as well')
 required_longread_parser = longread_parser.add_argument_group('required named arguments')
-required_longread_parser.add_argument('--lr-gtf-file', required=True, type=check_file,
+required_longread_parser.add_argument('--lr-gtf-file', required=False, type=check_file,
                     help='path to the long read GTF file')
-required_longread_parser.add_argument('--lr-tsv-file', required=True, type=check_file,
+required_longread_parser.add_argument('--lr-tsv-file', required=False, type=check_file,
                     help='path to the long read TSV file')
 required_longread_parser.add_argument('-o', '--output-file', type=str, required=True,
                     help='the path to write the resulting voila file to (recommended extension .lr.voila)')
-required_longread_parser.add_argument('-sg', '--splice-graph-file', required=True, type=check_file,
+required_longread_parser.add_argument('-sg', '--splice-graph-file', required=False, type=check_file,
                     help='the path to the majiq splice graph file which will be used to align to annotated exons')
 
 
