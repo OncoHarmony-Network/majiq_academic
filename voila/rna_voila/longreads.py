@@ -271,20 +271,8 @@ def longReadsInputsToLongReadsVoila():
                                 else:
                                     introns_dict[junc_pair] += tsv_dict.get(transcript)
 
-<<<<<<< HEAD
                     if len(df_transcript) < 3:
                         continue
-=======
-    log.info('~~~Parsing Long Read TSV~~~')
-    df_tsv = pd.read_csv(config.lr_tsv_file, sep='\t', engine='python')
-    df_tsv.columns.values[0] = 'transcript_id'
-    df_tsv.columns.values[1] = 'count'
-    df_tsv['count'] = df_tsv['count'].apply(lambda x: math.ceil(x))
-    df_tsv.set_index('transcript_id', inplace=True)
-    tsv_dict = df_tsv['count'].to_dict()
-    log.info('~~~Processing Long Read combined read counts~~~')
-    transcript_raw_reads, junction_raw_reads, exons_raw_reads = reads_new_version(df_gtf, tsv_dict)
->>>>>>> 3bd6927d (transcript read file format change)
 
                     for i, row in df_transcript.iterrows():
                         exon_pair = (row['start'], row['end'])
