@@ -254,7 +254,6 @@ def longReadsInputsToLongReadsVoila():
                                        range(len(junc_pairs_from_sql) - 1)]
 
                 transcripts_list = list(df_gene['transcript_id'].unique())
-                transcripts_list.remove('')
                 transcripts[gene] = {transcript: tsv_dict.get(transcript) for transcript in sorted(transcripts_list)}
 
                 for transcript in transcripts_list:
@@ -267,9 +266,9 @@ def longReadsInputsToLongReadsVoila():
                         for exon_pair in exon_pairs_list:
                             if exon_pair[0] <= junc_pair[0] and junc_pair[1] <= exon_pair[1]:
                                 if not introns_dict.get(junc_pair):
-                                    introns_dict[junc_pair] = tsv_dict.get(transcript)
+                                    introns_dict[junc_pair] = tsv_dict.get(transcript, 0)
                                 else:
-                                    introns_dict[junc_pair] += tsv_dict.get(transcript)
+                                    introns_dict[junc_pair] += tsv_dict.get(transcript, 0)
 
                     if len(df_transcript) < 3:
                         continue
@@ -277,9 +276,9 @@ def longReadsInputsToLongReadsVoila():
                     for i, row in df_transcript.iterrows():
                         exon_pair = (row['start'], row['end'])
                         if not exons_read_dict.get(exon_pair):
-                            exons_read_dict[exon_pair] = tsv_dict.get(transcript)
+                            exons_read_dict[exon_pair] = tsv_dict.get(transcript, 0)
                         else:
-                            exons_read_dict[exon_pair] += tsv_dict.get(transcript)
+                            exons_read_dict[exon_pair] += tsv_dict.get(transcript, 0)
 
                     if df_transcript['strand'].iloc[0] == '-':
                         df_transcript['next_exon'] = df_transcript.start.shift(1)
@@ -291,9 +290,9 @@ def longReadsInputsToLongReadsVoila():
                     for i, row in df_transcript.iterrows():
                         pair = (row['end'], int(row['next_exon']))
                         if not junction_read_dict.get(pair):
-                            junction_read_dict[pair] = tsv_dict.get(transcript)
+                            junction_read_dict[pair] = tsv_dict.get(transcript, 0)
                         else:
-                            junction_read_dict[pair] += tsv_dict.get(transcript)
+                            junction_read_dict[pair] += tsv_dict.get(transcript, 0)
 
                 junctions[gene] = dict(sorted(junction_read_dict.items()))
                 junctions[gene].update(dict(sorted(introns_dict.items())))
