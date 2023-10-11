@@ -1,6 +1,6 @@
-sphinx_rtd_theme
-ipython
-ipykernel
+sphinx_rtd_theme == 1.3.0
+ipython == 8.16.1
+ipykernel == 6.25.2
 sphinx == 3.1.0
-npsphinx
-pandoc
+npsphinx == 0.9.3
+pandoc == 2.3
