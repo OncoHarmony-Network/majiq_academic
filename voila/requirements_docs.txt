@@ -1,0 +1,6 @@
+sphinx_rtd_theme
+ipython
+ipykernel
+sphinx == 3.1.0
+npsphinx
+pandoc
