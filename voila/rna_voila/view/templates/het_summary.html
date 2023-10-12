@@ -427,6 +427,7 @@
                 subtree: true
             });
 
+        const color_b = new Colors();
         const lsvLoadPromise = new Promise((resolve, reject) => {
             document.querySelectorAll('.lsv-table')
                 .forEach(async function (lsv_table) {
@@ -446,6 +447,19 @@
                             type: 'POST'
                         },
                         columnDefs: [
+                            {
+                                targets: 0,
+                                sortable: true,
+                                render: (data, i, j, k) => {
+                                    const element = document.createElement('span');
+                                    element.textContent = data;
+                                    element.classList.add('junction-coords');
+                                    element.dataset.start = data[0];
+                                    element.dataset.end = data[1];
+                                    element.style.borderBottom = `${color_b.brewer(k.row)} solid 4px`;
+                                    return element.outerHTML;
+                                }
+                            },
                             {
                                 targets: 1,
                                 sortable: false,
