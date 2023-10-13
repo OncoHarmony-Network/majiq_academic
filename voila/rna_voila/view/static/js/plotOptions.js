@@ -26,6 +26,8 @@ class PlotOptions {
             this.group_visibility = {};
         }
 
+        this.violin_fixed_width = violin_fixed_width;
+
 
         this._init();
 
@@ -169,6 +171,14 @@ class PlotOptions {
                 $(v).find('dt .group-visible').prop('checked', false);
             })
             send_ajax(base_url + '/update-group-visibility', group_visibility).then(ret => {
+                $('.lsv-table').DataTable().ajax.reload();
+            })
+        });
+
+        $('#changeViolinFixedWidth').change(function(){
+            violin_fixed_width = $('#changeViolinFixedWidth').prop('checked');
+
+            send_ajax(base_url + '/update-violin-fixed-width', violin_fixed_width).then(ret => {
                 $('.lsv-table').DataTable().ajax.reload();
             })
         });

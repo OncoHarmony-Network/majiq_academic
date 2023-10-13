@@ -30,6 +30,10 @@
     <div class="pure-u-2-3">
         <form class="groups-control-form pure-form">
 
+            <label>Fixed Width Violin Plots
+                <input type="checkbox" id="changeViolinFixedWidth">
+            </label>
+
             <label>Change group order and display name
                 <button type="button" id="showAllGroupNamesButton">Show all</button>
                 <button type="button" id="hideAllGroupNamesButton">Hide all</button>
@@ -128,6 +132,7 @@
         {% else %}
         let group_visibility = null;
         {% endif %}
+        let violin_fixed_width = {{ session.get('violin_fixed_width', False) | tojson }};
 
 
 

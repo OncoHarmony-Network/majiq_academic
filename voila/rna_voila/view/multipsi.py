@@ -60,6 +60,10 @@ def update_group_visibility():
     session['group_visibility'] = request.json
     return jsonify({'ok':1})
 
+@bp.route('/update-violin-fixed-width', methods=('POST',))
+def update_violin_fixed_width():
+    session['violin_fixed_width'] = request.json
+    return jsonify({'ok':1})
 
 @bp.route('/gene/<gene_id>/')
 def gene(gene_id):
