@@ -485,89 +485,11 @@ class Violin {
             });
 
 
-            var deltaX;
-            const colWidth = this.violin_width + this.violin_pad;
-            var self = this;
-
-            var dragHandler = d3.drag()
-                .on("start", function () {
-                    var current = d3.select(this);
-                    deltaX = current.attr("data-x") - d3.event.x;
-                    current.style('cursor', 'grabbing');
-                })
-                .on("drag", function () {
-
-                    var current = d3.select(this);
-                    //for getting lsv_id of dragged element, this searches parents to find it
-                    var parent = self._get_parent(current, "lsv-table");
-                    const lsv_id = parent.attr('data-lsv-id');
-
-                    d3.selectAll(`.lsv-table[data-lsv-id="${lsv_id}"] text[data-group-idx="${current.attr("data-group-idx")}"]`)
-                        .attr("data-x", d3.event.x + deltaX)
-                        .attr("transform", "translate(" + (d3.event.x + deltaX) + ")");
-                    d3.selectAll(`.lsv-table[data-lsv-id="${lsv_id}"] path[data-group-idx="${current.attr("data-group-idx")}"]`)
-                        .attr("data-x", d3.event.x + deltaX)
-                        .attr("transform", (d, i, el) => `translate(${d3.event.x + deltaX + parseInt(el[0].getAttribute("x"))})`);
-                    d3.selectAll(`.lsv-table[data-lsv-id="${lsv_id}"] g[data-group-idx="${current.attr("data-group-idx")}"]`)
-                        .attr("data-x", d3.event.x + deltaX)
-                        .attr("transform", (d, i, el) => `translate(${d3.event.x + deltaX + parseInt(el[0].getAttribute("x"))})`);
-                    d3.selectAll(`.lsv-table[data-lsv-id="${lsv_id}"] svg[data-group-idx="${current.attr("data-group-idx")}"]`)
-                        .attr("data-x", d3.event.x + deltaX)
-                        .attr("x", (d, i, el) => d3.event.x + deltaX + parseInt(el[0].getAttribute("data-orig-x")));
-
-
-                })
-                .on("end", function (d, i) {
-
-                    var current = d3.select(this);
-                    var lsv_id = self._get_parent(current, "lsv-table").attr('data-lsv-id');
-                    var prev_index = $(d3.selectAll(`.lsv-table[data-lsv-id="${lsv_id}"] path[data-group-idx="${current.attr("data-group-idx")}"]`).node()).index();
-                    var finalIndex = (Math.floor(((d3.event.x + deltaX) + (colWidth/2)) / colWidth)) + prev_index;
-
-                    if(finalIndex > self.violin_count - 1){
-                        finalIndex = self.violin_count - 1;
-                    }else if(finalIndex < 0){
-                        finalIndex = 0;
-                    }
-
-                    // user released dragging, so we apply the swap
-                    // even if not dragged far enough for swap, we swap "with itself" to reset the position
-                    // we deal with quite a few element attributes here, mainly because we are swapping three different pieces
-                    // (violin plot, swarm, x-axis text) which are each set up in their own way.
-                    // attrs "x" and "transform" are used in the other plot generation functions to position the plots
-                    // "x" is used by the x-axis and "transform" is used by swarm and violin
-                    // "data-x" is used by the dragging logic to properly align the cursor with the element while dragging
-                    // "data-orig-x" is the original position of an element before dragging, so that it can be 'snapped back
-                    // to grid' after the drag is complete.
-
-
-                    $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] path[data-group-idx="${current.attr("data-group-idx")}"]`), function(i, el1){
-                        var el2 = $(el1).parent().children()[finalIndex];
-                        perform_swap(el1, el2, true)
-                    })
-                    $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] svg[data-group-idx="${current.attr("data-group-idx")}"]`), function(i, el1){
-                        var el2 = $(el1).parent().children()[finalIndex];
-                        perform_swap(el1, el2)
-                    })
-                    $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] g[data-group-idx="${current.attr("data-group-idx")}"]`), function(i, el1){
-                        var el2 = $(el1).parent().children()[finalIndex];
-                        perform_swap(el1, el2, true)
-                    })
-                    $.each($(`.lsv-table[data-lsv-id="${lsv_id}"] text[data-group-idx="${current.attr("data-group-idx")}"]`), function(i, el1){
-                        var el2 = $(el1).parent().children()[finalIndex];
-                        perform_swap(el1, el2)
-                    })
-                    current.style('cursor', 'ew-resize');
-
-                });
-
-
         g.selectAll('.violin')
 
             .data(bins)
             .enter()
             .append('path')
-            .style('cursor', 'ew-resize')
             .attr('class', 'violin')
             .attr('transform', (d, i) => `translate(${(this.violin_width + this.violin_pad) * (i + .5)})`)
             .attr("x", (d, i) => `${(this.violin_width + this.violin_pad) * (i + .5)}`)
@@ -580,11 +502,6 @@ class Violin {
             .attr('data-group-idx', (d, i) => i)
             //.attr('data-expected', (d, i) => medians ? medians[i] : expectation_value(d));
 
-        // console.log(g.selectAll('.violin'))
-        // dragHandler(g.selectAll('.violin'))
-        if($.inArray(view_type, ['multipsi', 'het']) !== -1){
-            d3.selectAll(".violin").call(dragHandler);
-        }
 
 
     }
