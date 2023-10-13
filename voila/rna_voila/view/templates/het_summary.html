@@ -377,14 +377,16 @@
                             v.querySelectorAll('circle')
                                 .forEach(c => {
 
-                                    c.onmouseover = () => {
+                                    c.onmouseover = (e) => {
+                                        e.stopPropagation()
                                         c.style.fill = 'orange';
                                         tool_tip.querySelector('.value').textContent = c.dataset.mu;
                                         tool_tip.querySelector('.sample').textContent = c.dataset.expName;
                                         tool_tip.querySelector('.expected').textContent = '';
                                         tool_tip.style.display = 'block';
                                     };
-                                    c.onmouseout = () => {
+                                    c.onmouseout = (e) => {
+                                        e.stopPropagation()
                                         c.style.fill = null;
                                         tool_tip.querySelector('.value').textContent = '';
                                         tool_tip.querySelector('.sample').textContent = '';
@@ -392,33 +394,20 @@
                                     };
                                 });
 
-                            v.querySelectorAll('.violin, .swarm-group, .x-axis')
-                                .forEach(h => {
 
-                                    h.onmouseover = () => {
-                                        if(!$(h).closest('.psi-violin-plot').find('.pairwise-check[data-checked="true"]').length){
-                                            const expected = $(h).data('expected');
-                                            if(expected){
-                                                tool_tip.querySelector('.expected').textContent = "E(PSI) = " + $(h).data('expected');
-                                            }
-                                            tool_tip.style.display = 'block';
+                            v.querySelectorAll('.violin, .swarm-group, .box-plot, .col-label')
+                                .forEach((c, i) => {
+                                    i = $(c).index();
+                                    prepareToolTip(c, i)
+                                });
 
-                                            draw_rowcol_highlight(h);
-                                        }
-                                    };
+                            v.querySelectorAll('.x-axis-grp text')
+                                .forEach((c, i) => {
+                                    i = $(c).parent().index();
+                                    prepareToolTip(c, i)
+                                });
 
-                                    h.onmouseout = () => {
-                                        if(!$(h).closest('.psi-violin-plot').find('.pairwise-check[data-checked="true"]').length) {
-                                            hide_rowcol_highlight(h);
-                                        }
-                                        tool_tip.style.display = 'none';
 
-                                    }
-                                    h.onmousemove = (e) => {
-                                        tool_tip.style.top = (e.pageY - 90) + 'px';
-                                        tool_tip.style.left = (e.pageX + 10) + 'px';
-                                    };
-                                })
                         });
                 }));
         })

@@ -323,11 +323,12 @@ class Violin {
         //this.swarm(g, color);
 
         if(junc_idx === 0)
-            this.draw_names_above(g, this.data.group_names, this.data.experiment_names);
+            this.draw_names_above(g, this.data.group_names);
         this.draw_x_axis(g, this.data.group_means[junc_idx], this.data.experiment_names);
         this.draw_psi_y_axis(g);
         this.box_plots(g, this.data.group_bins[junc_idx]);
         this.draw_zero_line(g, this.data.group_bins[junc_idx]);
+        this.add_metadata(g, this.data.group_names, this.data.experiment_names, this.data.group_bins[junc_idx])
 
 
     }
@@ -427,9 +428,10 @@ class Violin {
             .attr('transform', `translate(${this.y_axis_width}, ${this.top_padding})`);
 
         this.swarm(g2, color);
-        this.draw_x_axis(g, data.group_names, data.experiment_names);
+        this.draw_x_axis(g, data.group_names);
         this.draw_view_icons(g, data.group_names);
         this.draw_zero_line(g, data.group_names);
+        this.add_metadata(g, data.group_names, data.experiment_names, bins, medians)
         //this.pairwise_plot_triggers(g);
     }
 
@@ -576,7 +578,7 @@ class Violin {
                 return area(d)
             })
             .attr('data-group-idx', (d, i) => i)
-            .attr('data-expected', (d, i) => medians ? medians[i] : expectation_value(d));
+            //.attr('data-expected', (d, i) => medians ? medians[i] : expectation_value(d));
 
         // console.log(g.selectAll('.violin'))
         // dragHandler(g.selectAll('.violin'))
@@ -688,6 +690,7 @@ class Violin {
                     .range([0, this.violin_width + this.violin_pad]);
 
                 const g = svg.append('g')
+                    .attr('class', 'box-plot')
                     .attr('transform', `translate(${x(i)})`)
                     .attr("data-orig-x", x(i))
                     .attr("x", x(i))
@@ -748,7 +751,26 @@ class Violin {
 
   }
 
-    draw_names_above(svg, x_axis_data, experiment_names) {
+    add_metadata(svg, group_names, experiment_names, bins, medians){
+        svg
+            .append('g')
+            .attr('class', 'x-axis-meta')
+            .selectAll('g')
+            .data(group_names)
+            .enter()
+            .append('g')
+            .attr('data-num-experiments', (group, i) => {
+                return experiment_names[i].length;
+            })
+            .attr('data-expectation', (group, i) => {
+                return medians ? medians[i] : expectation_value(bins[i])
+            })
+            .attr('data-group-name', (group, i) => {
+                return group_names[i];
+            })
+    }
+
+    draw_names_above(svg, x_axis_data) {
         svg
             .append('g')
             .attr('class', 'x-axis')
@@ -759,9 +781,8 @@ class Violin {
             .append('text')
             .attr('y', this.svg_height - this.x_axis_height + 6)
             .attr('font-size', 12)
-            .attr('data-num-experiments', (group, i) => {
-                return experiment_names[i].length;
-            })
+            .attr('class', 'col-label')
+
             .text(d => {
                 try {
                     return parseFloat(d.toPrecision(3))
@@ -992,4 +1013,27 @@ class Violin {
             .attr('y', height)
             .attr('x', label_pad)
     }
+}
+
+const tool_tip = document.querySelector('.violin-tool-tip');
+function prepareToolTip(c, i){
+    const meta_info = $(c).closest('.psi-violin-plot').find('.x-axis-meta g')[i].dataset
+    c.onmouseover = () => {
+
+        tool_tip.querySelector('.value').textContent = `#Samples: ${meta_info.numExperiments}`;
+        tool_tip.querySelector('.sample').textContent = `Group: ${meta_info.groupName}`;
+        tool_tip.querySelector('.expected').textContent = `E(PSI): ${meta_info.expectation}`;
+        tool_tip.style.display = 'block';
+    };
+    c.onmouseout = () => {
+
+        tool_tip.querySelector('.value').textContent = '';
+        tool_tip.querySelector('.sample').textContent = '';
+        tool_tip.querySelector('.expected').textContent = '';
+        tool_tip.style.display = 'none';
+    };
+    c.onmousemove = (e) => {
+        tool_tip.style.top = (e.pageY - 90) + 'px';
+        tool_tip.style.left = (e.pageX + 10) + 'px';
+    };
 }

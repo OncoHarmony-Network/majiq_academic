@@ -383,3 +383,7 @@ Fancy radio button style thing
 /*
 End Fancy radio button style thing
  */
+
+.psi-violin-plot text:hover{
+    fill: orange;
+}
