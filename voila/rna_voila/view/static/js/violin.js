@@ -412,7 +412,7 @@ class Violin {
             .append('g')
             .attr('class', 'histograms');
 
-        this.draw_histograms(hist, bins, medians);
+        this.draw_histograms(hist, bins);
 
         hist
             .attr('stroke', color)
@@ -449,7 +449,7 @@ class Violin {
         return parent;
     };
 
-    draw_histograms(g, bins, medians) {
+    draw_histograms(g, bins) {
 
         // removing data from bins...with no data!
         // (setting to an empty array makes it so nothing is shown on the violin plot)
