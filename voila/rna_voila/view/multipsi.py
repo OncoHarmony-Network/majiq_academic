@@ -459,7 +459,7 @@ def download_genes():
 def copy_lsv(lsv_id):
     try:
         return views.copy_lsv(lsv_id, ViewPsi, ViewConfig().groups_to_voilas[request.get_json()['group_name']])
-    except rna_voila.exceptions.LsvIdNotFoundInVoilaFile:
+    except:
         return ""
 
 
