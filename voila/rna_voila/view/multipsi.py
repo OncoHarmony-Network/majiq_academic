@@ -4,7 +4,7 @@ from operator import itemgetter
 
 from flask import render_template, url_for, jsonify, request, session, Response, redirect, abort
 
-
+import rna_voila.exceptions
 from rna_voila.api.view_matrix import ViewPsi, ViewPsis
 from rna_voila.api.view_splice_graph import ViewSpliceGraph
 from rna_voila.index import Index
@@ -457,7 +457,10 @@ def download_genes():
 @bp.route('/copy-lsv', methods=('POST',))
 @bp.route('/copy-lsv/<lsv_id>', methods=('POST',))
 def copy_lsv(lsv_id):
-    return views.copy_lsv(lsv_id, ViewPsi, voila_file=ViewConfig().voila_files[0])
+    try:
+        return views.copy_lsv(lsv_id, ViewPsi, ViewConfig().groups_to_voilas[request.get_json()['group_name']])
+    except rna_voila.exceptions.LsvIdNotFoundInVoilaFile:
+        return ""
 
 
 @bp.route('/generate_ucsc_link', methods=('GET',))

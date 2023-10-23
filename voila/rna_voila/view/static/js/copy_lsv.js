@@ -33,7 +33,11 @@ const copy_lsv_modal_dropdown = (n, url) => {
             if (grp) {
                 show_modal();
                 send_ajax(url, {'group_name': grp}).then(lsv_data => {
-                    populate_modal(JSON.stringify(lsv_data).replace(/"/g, '\\"'))
+                    if(lsv_data != ''){
+                        populate_modal(JSON.stringify(lsv_data).replace(/"/g, '\\"'))
+                    }else{
+                        populate_modal('No LSV data for the selected group');
+                    }
                 })
             }
         })

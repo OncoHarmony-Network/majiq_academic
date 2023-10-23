@@ -547,12 +547,23 @@ class ViewPsis(ViewMulti):
             return self._get_prop('group_means', dict)
 
         @property
+        def all_group_bins(self):
+            """
+            Finds first file with this specific lsv id and gets group means. This does NOT consider any other
+            input files upon finding the first one with the lsv id
+            """
+            return self._get_prop_multi('group_bins')
+
+        @property
         def group_bins(self):
             """
             Finds first file with this specific lsv id and gets group means. This does NOT consider any other
             input files upon finding the first one with the lsv id
             """
             return self._get_prop('group_bins', dict)
+
+
+
 
     def lsv(self, lsv_id):
         """
