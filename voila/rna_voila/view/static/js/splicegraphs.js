@@ -1392,12 +1392,14 @@ class SpliceGraphs {
     mutation_observer() {
         window.addEventListener('click', e => {
             const el = e.target.parentNode;
-            if (!el.classList.contains('junction-grp') && !el.classList.contains('exon-grp') && !el.classList.contains('intron-retention-grp'))
+            if (!el.classList.contains('junction-grp') && !el.classList.contains('exon-grp') && !el.classList.contains('intron-retention-grp')){
                 document.querySelectorAll('.select, .select-filter')
                     .forEach(x => {
                         x.classList.remove('select');
                         x.classList.remove('select-filter')
                     })
+                filter_lsvs_client_side();
+            }
         });
 
         new MutationObserver(mutation_list => {
@@ -1464,14 +1466,17 @@ class SpliceGraphs {
                         });
 
 
+
                         if (click_new) {
                             el.dispatchEvent(new Event('mouseover'));
                             document.querySelectorAll('.mouseover-filter').forEach(el => el.classList.add('select-filter'));
                             el.classList.add('select');
                             document.querySelector('.coordinates').classList.add('select');
                             const d = d3.select(el).datum();
+                            filter_lsvs_client_side(d.start, d.end, el.classList.contains('exon-grp'))
                             copy_text(`${this.gene.chromosome}:${d.start}-${d.end}`)
                         } else {
+                            filter_lsvs_client_side();
                             el.dispatchEvent(new Event('mouseout'));
                         }
                     }

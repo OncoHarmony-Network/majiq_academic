@@ -146,13 +146,17 @@
                         url: '{{ url_for('main.summary_table', gene_id=gene.id) }}',
                         type: 'POST'
                     },
+                    // createdRow: function (row, data, index) {
+                    //     $(row).addClass("lsv");
+                    //     console.log(data)
+                    // },
                     columnDefs: [
                         {
                             targets: 0,
                             render: (data, _, cols) => {
                                 const form = document.createElement('div');
                                 form.classList.add('highlight-form');
-                                form.classList.add('lsv');
+                                //form.classList.add('lsv');
                                 form.setAttribute('data-lsv-id', cols[1]);
 
                                 const h = document.createElement('div');

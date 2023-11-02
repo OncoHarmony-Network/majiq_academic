@@ -1,3 +1,31 @@
+
+function filter_lsvs_client_side(start, end, permissive){
+    if(start === undefined || end === undefined){
+        $('.lsv').show()
+    }else{
+        $('.lsv').each((i, elem) => {
+            let found = false;
+            $(elem).find('.junction-coords').each((j, juncelem) => {
+                if(permissive){
+                    if(juncelem.dataset.start == start || juncelem.dataset.start == end ||
+                       juncelem.dataset.end == start || juncelem.dataset.end == end){
+                        found = true;
+                    }
+                }else{
+                    if(juncelem.dataset.start == start && juncelem.dataset.end == end){
+                        found = true;
+                    }
+                }
+            })
+            if(found){
+                $(elem).show();
+            }else{
+                $(elem).hide();
+            }
+        })
+    }
+}
+
 class PlotOptions {
     constructor(gene) {
 

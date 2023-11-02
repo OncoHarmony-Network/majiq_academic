@@ -448,6 +448,7 @@
                                     const element = document.createElement('span');
                                     element.textContent = data;
                                     element.classList.add('junction-coords');
+                                    data = data.split('-');
                                     element.dataset.start = data[0];
                                     element.dataset.end = data[1];
                                     element.style.borderBottom = `${color_b.brewer(k.row)} solid 4px`;
