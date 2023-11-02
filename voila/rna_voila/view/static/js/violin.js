@@ -217,11 +217,14 @@ class Violin {
         this.height_offset = 0;
 
 
-        if(violin_data.group_names && violin_data.group_names.length * (this.violin_width + this.violin_pad) > window.innerWidth * 0.7){
+        //if(violin_data.group_names && violin_data.group_names.length * (this.violin_width + this.violin_pad) > window.innerWidth * 0.7){
             if(violin_fixed_width){
 
             }else{
-                this.violin_width = ((window.innerWidth * 0.7) / violin_data.group_names.length) - this.violin_pad;
+                if(violin_data.group_names && violin_data.group_names.length * (this.violin_width + this.violin_pad) > window.innerWidth * 0.8){
+                    this.violin_width = ((window.innerWidth * 0.8) / violin_data.group_names.length) - this.violin_pad;
+                }
+
             }
 
             this.violin_label_tilt = 30;
@@ -235,7 +238,7 @@ class Violin {
                 this.top_padding = 14;
                 this.height_offset = 56;
             }
-        }
+        //}
 
         this.violin_height = 135;
         // this.x_axis_height = 125;
