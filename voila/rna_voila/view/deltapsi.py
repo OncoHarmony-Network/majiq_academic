@@ -256,7 +256,7 @@ def summary_table(gene_id):
 
             records[idx] = [
                 highlight,
-                lsv_id,
+                {'lsv_id': lsv_id, 'junction_coords': lsv_junctions.tolist() },
                 lsv_type,
                 grp_names[0],
                 excl_incl,

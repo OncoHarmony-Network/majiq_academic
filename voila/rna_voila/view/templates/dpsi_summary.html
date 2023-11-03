@@ -146,10 +146,9 @@
                         url: '{{ url_for('main.summary_table', gene_id=gene.id) }}',
                         type: 'POST'
                     },
-                    // createdRow: function (row, data, index) {
-                    //     $(row).addClass("lsv");
-                    //     console.log(data)
-                    // },
+                    createdRow: function (row, data, index) {
+                        $(row).addClass("lsv");
+                    },
                     columnDefs: [
                         {
                             targets: 0,
@@ -192,8 +191,23 @@
 
                                 return form.outerHTML
                             }
-                        },
-                        {
+                        }, {
+                            targets: 1,
+                            sortable: true,
+                            render: (data, i, j, k) => {
+                                const container = document.createElement('span');
+                                container.textContent = data.lsv_id;
+                                $.each(data['junction_coords'], (i, d) => {
+                                    const element = document.createElement('span');
+                                    element.classList.add('junction-coords');
+                                    element.dataset.start = d[0];
+                                    element.dataset.end = d[1];
+                                    element.style.display = 'none';
+                                    container.appendChild(element);
+                                })
+                                return container.outerHTML;
+                            }
+                        },  {
                             targets: 2,
                             orderable: false,
                             render: data => {
