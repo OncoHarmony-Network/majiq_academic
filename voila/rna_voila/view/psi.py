@@ -253,7 +253,7 @@ def summary_table(gene_id):
 
             records[idx] = [
                 highlight,
-                lsv_id,
+                {'lsv_id': lsv_id, 'junction_coords': psi.junctions.tolist() },
                 lsv_type,
                 grp_name,
                 grp_name,
