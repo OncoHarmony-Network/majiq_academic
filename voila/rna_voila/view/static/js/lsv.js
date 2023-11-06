@@ -915,10 +915,10 @@ class Lsv {
         ctx.beginPath();
         ctx.arc(Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), Math.round(y + area_figures[1]), (area_figures[0] / num_fig - 2 * SEP_FIG) * (1/3), -Math.PI, 0);
         ctx.stroke();
-        Lsv.renderNumReads(ctx, Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), MARGINS[2] + font_height, "69|42");
+        Lsv.renderNumReads(ctx, Math.round(x + (area_figures[0] / num_fig - SEP_FIG) / 2), MARGINS[2] + font_height, "69╦42");
         ctx.fillStyle = "rgba(0, 0, 0, 1)";
         ctx.font = "7pt Arial";
-        ctx.fillText("SR|LR reads", x + Math.round((area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
+        ctx.fillText("SR╦LR reads", x + Math.round((area_figures[0] / num_fig - SEP_FIG) / 2), canvas.height - MARGINS[3]);
         x = x + area_figures[0] / num_fig + SEP_FIG;
 
         ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
