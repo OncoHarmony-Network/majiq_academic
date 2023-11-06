@@ -14,6 +14,7 @@ from rna_voila.classify import Classify
 from rna_voila.filter import Filter
 from rna_voila.splitter import splitter, recombine
 from rna_voila.longreads import longReadsInputsToLongReadsVoila
+from rna_voila.api.licensing import check_license
 
 def check_list_file(value):
     """
@@ -58,6 +59,7 @@ def check_positive(value):
 parser = argparse.ArgumentParser(description='VOILA is a visualization package '
                                              'for Alternative Local Splicing Events.')
 parser.add_argument('-v', action='version', version=constants.VERSION)
+parser.add_argument('--license', required=False)
 
 # log parser
 log_parser = argparse.ArgumentParser(add_help=False)
@@ -478,6 +480,7 @@ if len(sys.argv) == 1:
     exit(1)
 
 args = parser.parse_args()
+check_license(args.license)
 
 if args.func == Classify:
     args.logger = args.directory + '/voila.log'

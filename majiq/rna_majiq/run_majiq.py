@@ -20,6 +20,7 @@ from rna_majiq.majiq_args import (
 )
 import rna_majiq.src.constants as constants
 import sys
+from rna_voila.api.licensing import check_license
 
 
 StoreGroupNames = StoreRequiredUniqueActionFactory()
@@ -50,6 +51,8 @@ def main():
         description="MAJIQ is a suite of tools to detect and quantify local"
         " splicing variations (LSVs) from RNA-seq data."
     )
+
+    parser.add_argument('--license', required=False)
 
     parser.add_argument(
         "-v",
@@ -610,6 +613,8 @@ def main():
         sys.exit(1)
 
     args = parser.parse_args()
+    check_license(args.license)
+
     args.func(args)
 
 

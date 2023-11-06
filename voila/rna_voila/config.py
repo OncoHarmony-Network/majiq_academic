@@ -15,7 +15,7 @@ from rna_voila.voila_log import voila_log
 
 _log_keys = ['logger', 'silent']
 _sys_keys = ['nproc', 'debug']
-_global_keys = ['analysis_type', 'memory_map_hdf5', 'groups_to_voilas']
+_global_keys = ['analysis_type', 'memory_map_hdf5', 'groups_to_voilas', 'license']
 
 _ViewConfig = namedtuple('ViewConfig', _global_keys + _sys_keys + _log_keys + ['voila_file', 'voila_files',
                                         'splice_graph_file',
