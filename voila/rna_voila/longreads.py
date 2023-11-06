@@ -280,12 +280,8 @@ def longReadsInputsToLongReadsVoila():
                         else:
                             exons_read_dict[exon_pair] += tsv_dict.get(transcript, 0)
 
-                    if df_transcript['strand'].iloc[0] == '-':
-                        df_transcript['next_exon'] = df_transcript.start.shift(1)
-                        df_transcript = df_transcript[2:]
-                    else:
-                        df_transcript['next_exon'] = df_transcript.start.shift(-1)
-                        df_transcript = df_transcript[1:-1]
+                    df_transcript['next_exon'] = df_transcript.start.shift(-1)
+                    df_transcript = df_transcript[1:-1]
 
                     for i, row in df_transcript.iterrows():
                         pair = (row['end'], int(row['next_exon']))
@@ -352,10 +348,6 @@ def longReadsInputsToLongReadsVoila():
                 transcript_junctions_reads = []
                 transcript_intron_retention = []
                 transcript_intron_retention_reads = []
-
-                if strand == '-':
-                    # transcript = [(x[1], x[0]) for x in (reversed(transcript))]
-                    transcript = [x for x in (reversed(transcript))]
 
                 # detect junctions
                 for i, lr_exon in enumerate(transcript):
