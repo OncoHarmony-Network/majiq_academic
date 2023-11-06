@@ -116,9 +116,10 @@ def index_table():
             records[idx] = [
                 {'href': url_for('main.gene', gene_id=gene_id), 'gene_name': gene_name},
                 lsv_id,
-                psi.lsv_type
+                psi.lsv_type,
+                grp_name
             ]
-            if len(ViewConfig().voila_files) == 1:
+            if ViewConfig().long_read_file:
                 records[idx].append(grp_name)
             records[idx].append(ucsc)
 
@@ -256,9 +257,10 @@ def summary_table(gene_id):
                 {'lsv_id': lsv_id, 'junction_coords': psi.junctions.tolist() },
                 lsv_type,
                 grp_name,
-                grp_name,
-                ucsc
             ]
+            if ViewConfig().long_read_file:
+                records[idx].append(grp_name)
+            records[idx].append(ucsc)
 
         return jsonify(dict(dt))
 

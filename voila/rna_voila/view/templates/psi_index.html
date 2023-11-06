@@ -16,8 +16,11 @@
                     const lsv_id = tds[1].textContent;
 
 
-                    json_ajax('{{ url_for("main.lsv_data") }}/' + encodeURIComponent(lsv_id)).then(lsv_data => {
-                        lsv_data = lsv_data[0]; // only short read for now.
+                    json_ajax('{{ url_for("main.lsv_data") }}/' + encodeURIComponent(lsv_id)).then(all_lsv_data => {
+
+                        const lsv_data = all_lsv_data[0];
+                        const lr_lsv_data = all_lsv_data[1];
+
                         const lsv = new Lsv(lsv_data);
                         lsv.cartoon(n.querySelector('.lsv-cartoon'));
 
@@ -27,6 +30,15 @@
                         violin.psi(s);
                         $(s).hide();
 
+                        if(lr_lsv_data){
+                            const lr_lsv = new Lsv(lr_lsv_data);
+                            const lr_violin = new Violin(lr_lsv_data.lsv);
+
+                            const lr_s = n.querySelector('.lr-psi-violin-plot');
+                            lr_lsv.draw_lsv_compact_stack_bars(n.querySelector('.lr-lsv-single-compact-percentiles'));
+                            $(lr_s).hide();
+                            lr_violin.psi(lr_s);
+                        }
                     });
 
                     copy_lsv_modal(n, '{{ url_for("main.copy_lsv") }}/' + encodeURIComponent(lsv_id))
@@ -45,6 +57,97 @@
                 });
         };
 
+        let columnDefs = [
+            {
+                targets: 0,
+                render: (data, _, cols) => {
+                    const element = document.createElement('a');
+                    const lsv_id = cols[1];
+                    element.href = data.href + `?lsv_id=${lsv_id}`;
+                    element.target = '_blank';
+                    element.rel = "noopener noreferrer";
+                    element.textContent = data.gene_name + ' ⎆';
+                    element.classList.add('pure-button');
+                    element.classList.add('pure-button-primary');
+                    element.title = `Analyze gene ${data.gene_name} in depth`;
+                    element.style = "font-size: 150%; background-color: #009be7;";
+                    return element.outerHTML
+                }
+            },
+            {
+                targets: 2,
+                sortable: false,
+                render: data => {
+                    const element = document.createElement('canvas');
+                    element.setAttribute('width', '200');
+                    element.setAttribute('height', '80');
+                    element.classList.add('lsv-cartoon');
+                    element.dataset.lsvType = data;
+                    return element.outerHTML
+                }
+            },
+            {
+                targets: 3,
+                sortable: false,
+                render: data => {
+                    const compact = document.createElement('canvas');
+                    compact.classList.add('lsv-single-compact-percentiles');
+                    compact.dataset.group = data;
+
+                    const violin = document.createElement('svg');
+                    violin.classList.add('psi-violin-plot');
+                    violin.setAttribute('width', '0');
+                    violin.setAttribute('height', '0');
+                    violin.dataset.group = data;
+
+                    return compact.outerHTML + violin.outerHTML
+                }
+            },
+
+        ]
+        if(longread_enabled){
+            columnDefs.push(
+                {
+                    targets: 4,
+                    sortable: false,
+                    render: data => {
+                        const compact = document.createElement('canvas');
+                        compact.classList.add('lr-lsv-single-compact-percentiles');
+                        compact.dataset.group = data;
+
+                        const violin = document.createElement('svg');
+                        violin.classList.add('lr-psi-violin-plot');
+                        violin.setAttribute('width', '0');
+                        violin.setAttribute('height', '0');
+                        violin.dataset.group = data;
+
+                        return compact.outerHTML + violin.outerHTML
+                    }
+                }
+            )
+        }
+        columnDefs.push(
+             {
+                targets: longread_enabled ? 5 : 4,
+                sortable: false,
+                render: data => {
+                    const copy_lsv = document.createElement('button');
+                    copy_lsv.textContent = 'Copy LSV';
+                    copy_lsv.classList.add('pure-button', 'copy-lsv');
+
+                    const ucsc_a = document.createElement('a');
+                    ucsc_a.href = data;
+                    ucsc_a.target = '_blank';
+                    ucsc_a.rel = 'noopener noreferrer';
+                    const ucsc_img = document.createElement('img');
+                    ucsc_img.src = '{{ url_for('static', filename="img/ucsc.png") }}';
+                    ucsc_a.appendChild(ucsc_img);
+
+                    return copy_lsv.outerHTML + ucsc_a.outerHTML
+                }
+            }
+        )
+
         const $results = $('#results').DataTable({
             processing: true,
             serverSide: true,
@@ -55,72 +158,7 @@
                 type: 'POST',
                 data: json_data => form_to_json(json_data)
             },
-            columnDefs: [
-                {
-                    targets: 0,
-                    render: (data, _, cols) => {
-                        const element = document.createElement('a');
-                        const lsv_id = cols[1];
-                        element.href = data.href + `?lsv_id=${lsv_id}`;
-                        element.target = '_blank';
-                        element.rel = "noopener noreferrer";
-                        element.textContent = data.gene_name + ' ⎆';
-                        element.classList.add('pure-button');
-                        element.classList.add('pure-button-primary');
-                        element.title = `Analyze gene ${data.gene_name} in depth`;
-                        element.style = "font-size: 150%; background-color: #009be7;";
-                        return element.outerHTML
-                    }
-                },
-                {
-                    targets: 2,
-                    sortable: false,
-                    render: data => {
-                        const element = document.createElement('canvas');
-                        element.setAttribute('width', '200');
-                        element.setAttribute('height', '80');
-                        element.classList.add('lsv-cartoon');
-                        element.dataset.lsvType = data;
-                        return element.outerHTML
-                    }
-                },
-                {
-                    targets: 3,
-                    sortable: false,
-                    render: data => {
-                        const compact = document.createElement('canvas');
-                        compact.classList.add('lsv-single-compact-percentiles');
-                        compact.dataset.group = data;
-
-                        const violin = document.createElement('svg');
-                        violin.classList.add('psi-violin-plot');
-                        violin.setAttribute('width', '0');
-                        violin.setAttribute('height', '0');
-                        violin.dataset.group = data;
-
-                        return compact.outerHTML + violin.outerHTML
-                    }
-                },
-                {
-                    targets: 4,
-                    sortable: false,
-                    render: data => {
-                        const copy_lsv = document.createElement('button');
-                        copy_lsv.textContent = 'Copy LSV';
-                        copy_lsv.classList.add('pure-button', 'copy-lsv');
-
-                        const ucsc_a = document.createElement('a');
-                        ucsc_a.href = data;
-                        ucsc_a.target = '_blank';
-                        ucsc_a.rel = 'noopener noreferrer';
-                        const ucsc_img = document.createElement('img');
-                        ucsc_img.src = '{{ url_for('static', filename="img/ucsc.png") }}';
-                        ucsc_a.appendChild(ucsc_img);
-
-                        return copy_lsv.outerHTML + ucsc_a.outerHTML
-                    }
-                }
-            ]
+            columnDefs: columnDefs
         });
 
         let to;
@@ -180,6 +218,14 @@
                 $(violin).toggle();
                 $(compact).toggle();
             })
+        $('#results tbody')
+            .on('click', '.lr-psi-violin-plot, .lr-lsv-single-compact-percentiles', event => {
+                const parent = event.target.closest('td');
+                const violin = parent.querySelector('.lr-psi-violin-plot');
+                const compact = parent.querySelector('.lr-lsv-single-compact-percentiles');
+                $(violin).toggle();
+                $(compact).toggle();
+            })
 
     </script>
 {% endblock %}
@@ -231,6 +277,9 @@
                     <th>LSV ID</th>
                     <th>LSV Type</th>
                     <th>Ψ per Junction</th>
+                    {% if vconf["long_read_file"] %}
+                        <th>LR Ψ per Junction</th>
+                    {% endif %}
                     <th>Links</th>
                 </tr>
                 </thead>
