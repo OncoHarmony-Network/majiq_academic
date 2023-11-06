@@ -2,6 +2,8 @@
 
 {% block script %}
     <script>
+        const view_type = 'het';
+
         new MutationObserver(mutations => {
             mutations.forEach(m => m.addedNodes
                 .forEach(n => {
@@ -15,17 +17,6 @@
                     json_ajax('{{ url_for("main.lsv_data") }}/' + encodeURIComponent(lsv_id))
                         .then(lsv_data => {
                             const lsv = new Lsv(lsv_data);
-                            const violin = new Violin(lsv_data.lsv);
-                            n.querySelectorAll('.excl-incl-rect')
-                                .forEach(s => {
-                                    lsv.draw_delta_lsv_compact_svg(s);
-                                });
-
-                            n.querySelectorAll('.dpsi-violin')
-                                .forEach(s => {
-                                    $(s).hide();
-                                    violin.deltapsi(s);
-                                });
 
                             n.querySelectorAll('.lsv-cartoon')
                                 .forEach(s => lsv.cartoon(s));
