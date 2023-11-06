@@ -38,9 +38,9 @@
         json_ajax('{{ url_for("main.splice_graph", gene_id=gene.id) }}').then(gene => {
             json_ajax('{{ url_for("main.splice_graph_lr", gene_id=gene.id) }}').then(gene_lr => {
                 json_ajax('{{ url_for("main.splice_graph_combined", gene_id=gene.id) }}').then(gene_c => {
-                    console.log('gene', gene);
-                    console.log('gene_lr', gene_lr);
-                    console.log('gene_c', gene_c);
+                    // console.log('gene', gene);
+                    // console.log('gene_lr', gene_lr);
+                    // console.log('gene_c', gene_c);
                     const sgs = new SpliceGraphs('.splice-graph-container', {
                         gene: gene,
                         gene_lr: gene_lr,
