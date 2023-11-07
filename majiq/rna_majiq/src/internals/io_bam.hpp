@@ -62,6 +62,7 @@ namespace io_bam{
 
             unsigned int junc_limit_index_ ;
             bool simpl_ ;
+            bool allow_full_intergene_ ;
             omp_lock_t map_lck_ ;
 
             void update_eff_len(const unsigned int new_eff_len);
@@ -74,8 +75,8 @@ namespace io_bam{
             IOBam(){ }
 
             IOBam(string bam1, int strandness1, unsigned int eff_len1, unsigned int nthreads1,
-                  map<string, vector<overGene*>> glist1, bool simpl1): strandness_(strandness1), eff_len_(eff_len1),
-                                                                  nthreads_(nthreads1), glist_(glist1), simpl_(simpl1){
+                  map<string, vector<overGene*>> glist1, bool simpl1, bool allow_full_intergene): strandness_(strandness1), eff_len_(eff_len1),
+                             nthreads_(nthreads1), glist_(glist1), simpl_(simpl1), allow_full_intergene_(allow_full_intergene){
                 const unsigned int min_buff_len = MIN_BUFF_LEN;
                 buff_len_ = std::max(eff_len_, min_buff_len);
                 omp_init_lock( &map_lck_ ) ;

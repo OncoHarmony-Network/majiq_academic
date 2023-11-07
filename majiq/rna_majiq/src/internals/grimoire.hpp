@@ -22,6 +22,7 @@ typedef vector<float> psi_distr_t ;
 typedef std::pair<int, int> coord_key_t;
 typedef string lsv_id_t;
 
+
 namespace grimoire{
     class Exon ;
     class Junction ;
@@ -149,6 +150,8 @@ namespace grimoire{
             static bool func_comp (_Region* a, int coord){
                 return a->get_end() < coord ;
             }
+
+
 
             template <class myRegion>
             static bool islowerRegion(myRegion * a, myRegion * b){
@@ -538,17 +541,21 @@ namespace grimoire{
             string  chromosome_ ;
             char    strand_ ;
             omp_lock_t map_lck_ ;
+            unsigned int ext3prime_ ;
+            unsigned int ext5prime_ ;
 
         public:
+
+
             map <coord_key_t, Junction*> junc_map_;
             map <coord_key_t, Exon*> exon_map_;
             vector <Intron*> intron_vec_ ;
 
-
             Gene (){}
             Gene(string id1, string name1, string chromosome1,
-                 char strand1, unsigned int start1, unsigned int end1): _Region(start1, end1), id_(id1), name_(name1),
-                                                                        chromosome_(chromosome1), strand_(strand1){
+                 char strand1, unsigned int start1, unsigned int end1, unsigned int ext3prime, unsigned int ext5prime):
+                  _Region(start1, end1), id_(id1), name_(name1), chromosome_(chromosome1), strand_(strand1),
+                  ext3prime_(ext3prime), ext5prime_(ext5prime){
                 omp_init_lock( &map_lck_ ) ;
             }
 
@@ -567,6 +574,12 @@ namespace grimoire{
             string  get_chromosome(){ return chromosome_ ;}
             char    get_strand()    { return strand_ ;}
             string  get_name()      { return name_ ;}
+            int     get_utr_start() {
+                return get_start() - ext5prime_;
+            }
+            int     get_utr_end() {
+                return get_end() + ext3prime_;
+            }
             void    create_annot_intron(int start_ir, int end_ir, bool simpl, bool enable_anot_ir){
                 Intron * ir = new Intron(start_ir +1, end_ir -1, true, this, simpl, enable_anot_ir) ;
                 intron_vec_.push_back(ir) ;
@@ -692,6 +705,7 @@ namespace grimoire{
             glist.clear() ;
             glist.shrink_to_fit() ;
         }
+
     } ;
 
 
