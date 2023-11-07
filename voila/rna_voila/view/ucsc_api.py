@@ -137,7 +137,7 @@ def make_custom_track(genome, _chr, strand, exons, all_introns, all_junctions):
     content = r.text
 
     hgsid = re.findall(r'hgsid=[0-9]*_[a-zA-Z0-9]*', content)[0].split('=')[1]
-    link = f'http://genome.ucsc.edu/cgi-bin/hgTracks?hgsid={hgsid}'
+    link = f'http://genome.ucsc.edu/cgi-bin/hgTracks?hgsid={hgsid}&position={_chr}%3A{exons[0]["start"]}-{exons[-1]["end"]}'
     return link
 
 if __name__ == "__main__":
