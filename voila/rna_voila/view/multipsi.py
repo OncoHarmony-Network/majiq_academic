@@ -134,10 +134,7 @@ def index_table():
             gene_name, gene_id, lsv_id = values
 
             psi = v.lsv(lsv_id)
-            gene = sg.gene(gene_id)
-            lsv_exons = sg.lsv_exons(gene_id, psi.junctions)
-            start, end = views.lsv_boundries(lsv_exons)
-            ucsc = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
+            ucsc = url_for('main.generate_ucsc_link', lsv_id=lsv_id)
 
             records[idx] = [
                 {'href': url_for('main.gene', gene_id=gene_id), 'gene_name': gene_name},
@@ -207,10 +204,7 @@ def summary_table(gene_id):
             psi = v.lsv(lsv_id)
             lsv_type = psi.lsv_type
 
-            gene = sg.gene(gene_id)
-            lsv_exons = sg.lsv_exons(gene_id, psi.junctions)
-            start, end = views.lsv_boundries(lsv_exons)
-            ucsc = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
+            ucsc = url_for('main.generate_ucsc_link', lsv_id=lsv_id)
 
             try:
                 highlight = session['highlight'][lsv_id]

@@ -248,10 +248,7 @@ def summary_table(gene_id):
             except KeyError:
                 highlight = [False, False]
 
-            gene = sg.gene(gene_id)
             lsv_junctions = dpsi.junctions
-            lsv_exons = sg.lsv_exons(gene_id, lsv_junctions)
-            start, end = views.lsv_boundries(lsv_exons)
             ucsc = url_for('main.generate_ucsc_link', lsv_id=lsv_id)
 
             records[idx] = [

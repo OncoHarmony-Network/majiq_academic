@@ -185,11 +185,7 @@ def index_table():
             lsv_id, gene_id, gene_name, max_dpsi, min_stats = values
 
             het = p.lsv(lsv_id)
-            lsv_junctions = het.junctions
-            lsv_exons = sg.lsv_exons(gene_id, lsv_junctions)
-            start, end = views.lsv_boundries(lsv_exons)
-            gene = sg.gene(gene_id)
-            ucsc = views.ucsc_href(sg.genome, gene['chromosome'], start, end)
+            ucsc = url_for('main.generate_ucsc_link', lsv_id=lsv_id)
             records[idx] = [
                 (url_for('main.gene', gene_id=gene_id),
                  gene_name),
