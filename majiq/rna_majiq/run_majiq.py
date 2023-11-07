@@ -20,7 +20,6 @@ from rna_majiq.majiq_args import (
 )
 import rna_majiq.src.constants as constants
 import sys
-from rna_voila.api.licensing import check_license
 
 
 StoreGroupNames = StoreRequiredUniqueActionFactory()
@@ -638,7 +637,6 @@ def main():
         sys.exit(1)
 
     args = parser.parse_args()
-    check_license(args.license)
 
     args.func(args)
 

@@ -31,7 +31,7 @@ import cython
 from cython import parallel
 import numpy as np
 cimport numpy as np
-
+from rna_voila.api.licensing import check_license
 
 cdef extern from "sqlite3.h":
     struct sqlite3
@@ -662,6 +662,7 @@ class Builder(BasicPipeline):
         logger = majiq_logger.get_logger(logFile, silent=self.silent, debug=self.debug)
         logger.info(f"Majiq Build v{constants.VERSION}")
         logger.info("Command: %s" % " ".join(sys.argv))
+        check_license(majiq_config.license, logger)
 
         if sum((not majiq_config.lsv_strict, majiq_config.only_target_lsvs, majiq_config.only_source_lsvs,)) > 1:
             logger.critical("You may only specify one of --permissive-lsvs, --target-lsvs, --source-lsvs")

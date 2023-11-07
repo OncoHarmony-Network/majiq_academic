@@ -26,6 +26,7 @@ from cython.parallel import prange, threadid
 
 cimport numpy as np
 import numpy as np
+from rna_voila.api.licensing import check_license
 
 def calc_independent(args):
     pipeline_run(independent(args))
@@ -288,6 +289,7 @@ cdef void _core_independent(object self):
 
     logger.info(f"Majiq deltapsi heterogeneous v{constants.VERSION}")
     logger.info("Command: %s" % " ".join(sys.argv))
+    check_license(self.license, logger)
     logger.info("GROUP1: %s" % self.files1)
     logger.info("GROUP2: %s" % self.files2)
 

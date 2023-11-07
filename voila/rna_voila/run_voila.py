@@ -480,7 +480,6 @@ if len(sys.argv) == 1:
     exit(1)
 
 args = parser.parse_args()
-check_license(args.license)
 
 if args.func == Classify:
     args.logger = args.directory + '/voila.log'
@@ -501,6 +500,7 @@ def main():
 
     log.info('Command: {0}'.format(' '.join(sys.argv)))
     log.info('Voila v{}'.format(constants.VERSION))
+    check_license(args.license, log)
 
     try:
 
