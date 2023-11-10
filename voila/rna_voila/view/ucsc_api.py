@@ -112,18 +112,6 @@ def make_custom_track(genome, _chr, strand, exons, all_introns, all_junctions):
     # bed_file += f'{_chr} {global_start} {global_end} Pos1 0 {strand} {global_start} {global_end} 255,0,0 {num_blocks} {",".join(block_lengths)} {",".join(block_starts)}\n'
 
 
-
-
-#browser position chr7:127471196-127495720
-#browser hide all
-#track name="ItemRGBDemo" description="Item RGB demonstration" visibility=2 itemRgb="On"
-
-    if False:
-        print("~~~~~~~~~~~~~~~~~~")
-        print(bed_file)
-        print("~~~~~~~~~~~~~~~~~~")
-
-
     tmp_file = StringIO()
     tmp_file.write(bed_file)
     tmp_file.seek(0)
@@ -132,12 +120,12 @@ def make_custom_track(genome, _chr, strand, exons, all_introns, all_junctions):
     files = {'hgct_customText': tmp_file}
     payload = {'db': genome}
 
-    r = requests.post('http://genome.ucsc.edu/cgi-bin/hgCustom', files=files, data=payload)
+    r = requests.post('https://genome.ucsc.edu/cgi-bin/hgCustom', files=files, data=payload)
 
     content = r.text
 
     hgsid = re.findall(r'hgsid=[0-9]*_[a-zA-Z0-9]*', content)[0].split('=')[1]
-    link = f'http://genome.ucsc.edu/cgi-bin/hgTracks?hgsid={hgsid}&position={_chr}%3A{exons[0]["start"]}-{exons[-1]["end"]}'
+    link = f'https://genome.ucsc.edu/cgi-bin/hgTracks?hgsid={hgsid}&position={_chr}%3A{exons[0]["start"]}-{exons[-1]["end"]}'
     return link
 
 if __name__ == "__main__":
