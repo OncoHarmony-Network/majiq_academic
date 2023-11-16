@@ -1390,15 +1390,18 @@ class SpliceGraphs {
     }
 
     mutation_observer() {
+        const topElem = $('.top')[0];
         window.addEventListener('click', e => {
             const el = e.target.parentNode;
-            if (!el.classList.contains('junction-grp') && !el.classList.contains('exon-grp') && !el.classList.contains('intron-retention-grp')){
-                document.querySelectorAll('.select, .select-filter')
-                    .forEach(x => {
-                        x.classList.remove('select');
-                        x.classList.remove('select-filter')
-                    })
-                filter_lsvs_client_side();
+            if(topElem.contains(el)){
+                if (!el.classList.contains('junction-grp') && !el.classList.contains('exon-grp') && !el.classList.contains('intron-retention-grp')){
+                    document.querySelectorAll('.select, .select-filter')
+                        .forEach(x => {
+                            x.classList.remove('select');
+                            x.classList.remove('select-filter')
+                        })
+                    filter_lsvs_client_side();
+                }
             }
         });
 

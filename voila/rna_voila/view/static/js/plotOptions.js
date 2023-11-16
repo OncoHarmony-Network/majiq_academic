@@ -7,8 +7,8 @@ function filter_lsvs_client_side(start, end, permissive){
             let found = false;
             $(elem).find('.junction-coords').each((j, juncelem) => {
                 if(permissive){
-                    if(juncelem.dataset.start == start || juncelem.dataset.start == end ||
-                       juncelem.dataset.end == start || juncelem.dataset.end == end){
+                    if((start <= juncelem.dataset.start && end >= juncelem.dataset.start) ||
+                       (start <= juncelem.dataset.end && end >= juncelem.dataset.end)){
                         found = true;
                     }
                 }else{
