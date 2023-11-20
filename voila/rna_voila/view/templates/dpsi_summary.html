@@ -35,12 +35,6 @@
                         },
                         download_img: "{{ url_for('static', filename='img/download.svg')}}"});
 
-                    sgs.init_create().then(s => {
-                        new SpliceGraphTools(s, gene, highlight_lsvs);
-                        sgs.create_transcripts();
-                        resolve();
-                    });
-
                     highlight_lsvs = () => {
                         const hl_data = Array.from(document.querySelectorAll('.highlight-form'))
                             .map(f => {
@@ -54,6 +48,14 @@
                             sgs.highlight(lsvs);
                         })
                     };
+
+                    sgs.init_create().then(s => {
+                        new SpliceGraphTools(s, gene, highlight_lsvs);
+                        sgs.create_transcripts();
+                        resolve();
+                    });
+
+
 
 
 
@@ -148,6 +150,7 @@
                     },
                     createdRow: function (row, data, index) {
                         $(row).addClass("lsv");
+                        row.setAttribute('data-lsv-id', data[1].lsv_id);
                     },
                     columnDefs: [
                         {
@@ -155,8 +158,6 @@
                             render: (data, _, cols) => {
                                 const form = document.createElement('div');
                                 form.classList.add('highlight-form');
-                                //form.classList.add('lsv');
-                                form.setAttribute('data-lsv-id', cols[1]);
 
                                 const h = document.createElement('div');
 

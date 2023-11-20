@@ -52,12 +52,17 @@
             columnDefs: [
                 {
                     targets: 0,
-                    render: data => {
+                    render: (data, _, cols) => {
                         const element = document.createElement('a');
-                        element.href = data.href;
+                        const lsv_id = cols[1];
+                        element.href = data.href + `?lsv_id=${lsv_id}`;
                         element.target = '_blank';
                         element.rel = "noopener noreferrer";
-                        element.textContent = data.gene_name;
+                        element.textContent = data.gene_name + ' ⎆';
+                        element.classList.add('pure-button');
+                        element.classList.add('pure-button-primary');
+                        element.title = `Analyze gene ${data.gene_name} in depth`;
+                        element.style = "font-size: 150%; background-color: #009be7;";
                         return element.outerHTML
                     }
                 },

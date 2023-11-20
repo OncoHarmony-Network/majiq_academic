@@ -116,7 +116,8 @@ def gene(gene_id):
                                group_names=m.group_names,
                                analysis_type='multipsi',
                                ucsc=ucsc,
-                               filter_exon_numbers=filter_exon_numbers
+                               filter_exon_numbers=filter_exon_numbers,
+                               selected_lsv_id=request.args.get('lsv_id', '')
                                )
 
 

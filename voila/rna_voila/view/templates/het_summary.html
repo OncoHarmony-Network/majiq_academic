@@ -199,13 +199,6 @@
 
                     };
 
-                    sgs.init_create().then(s => {
-                        new SpliceGraphTools(s, gene, highlight_lsvs);
-                        sgs.create_transcripts();
-                        resolve();
-                    });
-                    const plotOpts = new PlotOptions(gene);
-
                     document.querySelectorAll('.highlight-form')
                         .forEach(h => h.addEventListener('change', (event) => {
                             const input = event.target;
@@ -218,6 +211,15 @@
 
                             highlight_lsvs();
                         }));
+
+                    sgs.init_create().then(s => {
+                        new SpliceGraphTools(s, gene, highlight_lsvs);
+                        sgs.create_transcripts();
+                        resolve();
+                    });
+                    const plotOpts = new PlotOptions(gene);
+
+
 
                     // $('.lsv-table tbody').on('mouseenter', 'tr', function(){
                     //     const hl_data = [[$(this).closest('.lsv-table').data('lsv-id'), true, false]];
