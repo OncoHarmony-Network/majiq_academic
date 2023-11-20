@@ -9,4 +9,4 @@ build-backend = "setuptools.build_meta"
 
 
 [tool.setuptools_scm]
-fallback_version = "2.2.0+scmfallback"
+fallback_version = "2.5.0+scmfallback"
