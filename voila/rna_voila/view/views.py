@@ -46,6 +46,11 @@ def get_bp(name):
     if os.environ.get('VOILA_EXT_STATIC_URL_PATH', None):
         env_confs['static_url_path'] = os.environ['VOILA_EXT_STATIC_URL_PATH']
 
+    # this is for frozen / windows / pyinstaller static paths
+    if hasattr(sys, '_MEIPASS'):
+        env_confs['static_folder'] = os.path.join(sys._MEIPASS, 'static')
+        env_confs['template_folder'] = os.path.join(sys._MEIPASS, 'templates')
+
     app = Flask(name, **env_confs)
     app.secret_key = os.urandom(16)
     app.config['EXT_URL_PREFIX'] = os.environ.get('VOILA_EXT_URL_PREFIX', '')
