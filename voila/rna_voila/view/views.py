@@ -16,6 +16,7 @@ from flask import Blueprint, Flask
 from flask_session import Session
 import tempfile, atexit, shutil
 from rna_voila.view.ucsc_api import make_custom_track
+import traceback
 
 
 if os.name != 'nt':
@@ -41,15 +42,16 @@ if os.name != 'nt':
 def get_bp(name):
 
     env_confs = {}
+
+    # for pyinstaller
+    if getattr(sys, 'frozen', False):
+        env_confs['template_folder'] = os.path.join(os.path.dirname(sys.executable), '_internal', 'voila', 'templates')
+        env_confs['static_folder'] = os.path.join(os.path.dirname(sys.executable), '_internal', 'voila', 'static')
+
     if os.environ.get('VOILA_EXT_STATIC_FOLDER', None):
         env_confs['static_folder'] = os.environ['VOILA_EXT_STATIC_FOLDER']
     if os.environ.get('VOILA_EXT_STATIC_URL_PATH', None):
         env_confs['static_url_path'] = os.environ['VOILA_EXT_STATIC_URL_PATH']
-
-    # this is for frozen / windows / pyinstaller static paths
-    if hasattr(sys, '_MEIPASS'):
-        env_confs['static_folder'] = os.path.join(sys._MEIPASS, 'static')
-        env_confs['template_folder'] = os.path.join(sys._MEIPASS, 'templates')
 
     app = Flask(name, **env_confs)
     app.secret_key = os.urandom(16)
@@ -95,7 +97,7 @@ def run_service():
 
 
     if web_server == 'waitress':
-        serve(run_app, port=port, host=host)
+        serve(run_app, port=port, host=host, expose_tracebacks=ViewConfig().debug)
     elif web_server == 'gunicorn':
         if os.name == 'nt':
             raise Exception("Gunicorn is unsupported on windows")
@@ -157,6 +159,7 @@ def get_app():
                 session['warnings'] = []
                 for warning in warnings:
                     session['warnings'].append(f'Warning: detected groups with the same name "{warning[0]}", which have different sets of experiments: {warning[1]}')
+
 
     return run_app
 

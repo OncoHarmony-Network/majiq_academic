@@ -4,13 +4,17 @@ OUTPUT_FOLDER='/tmp/voila_app_dist'
 WORK_FOLDER='/tmp/voila_build'
 SCRIPT_FOLDER="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
+
+
 echo "--------------------------------------- Packaging Voila App ---------------------------------------"
 echo "Source Files: "
-echo "~    $SCRIPT_FOLDER/../run_voila.py"
+echo "~    $SCRIPT_FOLDER/../rna_voila/run_voila.py"
 echo "~    $SCRIPT_FOLDER/main.py"
 echo "Output Directory: "
 echo "~    $OUTPUT_FOLDER"
 echo ""
+
+exit 0
 
 rm -r "$OUTPUT_FOLDER" 2> /dev/null
 rm -r "$WORK_FOLDER" 2> /dev/null
@@ -27,11 +31,11 @@ rm -r "$WORK_FOLDER" 2> /dev/null
 #pyinstaller --workpath "$WORK_FOLDER" --distpath "$OUTPUT_FOLDER" -n voila "$SCRIPT_FOLDER/voila.spec"
 
 # building voila itself
-pyinstaller --windowed --icon="$SCRIPT_FOLDER/res/icon.ico" --workpath "$WORK_FOLDER" --distpath "$OUTPUT_FOLDER" "$SCRIPT_FOLDER/../run_voila.py" -n voila_freeze
+pyinstaller --windowed --icon="$SCRIPT_FOLDER/res/icon.ico" --workpath "$WORK_FOLDER" --distpath "$OUTPUT_FOLDER" "$SCRIPT_FOLDER/../rna_voila/run_voila.py" --add-data "voila/rna_voila/view/templates:voila/templates" --add-data "voila/rna_voila/view/static:voila/static" -n voila_freeze
 # copying in required hard files
-mkdir -p "$OUTPUT_FOLDER/voila_freeze/voila/view"
-cp -r "$SCRIPT_FOLDER/../view/static" "$OUTPUT_FOLDER/voila_freeze/voila/view"
-cp -r "$SCRIPT_FOLDER/../view/templates" "$OUTPUT_FOLDER/voila_freeze/voila/view"
+#mkdir -p "$OUTPUT_FOLDER/voila_freeze/voila/view"
+#cp -r "$SCRIPT_FOLDER/../view/static" "$OUTPUT_FOLDER/voila_freeze/voila/view"
+#cp -r "$SCRIPT_FOLDER/../view/templates" "$OUTPUT_FOLDER/voila_freeze/voila/view"
 
 rm -r "$WORK_FOLDER"
 
