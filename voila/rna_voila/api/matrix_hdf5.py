@@ -27,10 +27,14 @@ def open_hdf5(filename, mode):
 
     filename = str(filename)
     if mode == 'r':
-        if config.memory_map_hdf5:
+        if config.memory_map_hdf5 or config.preserve_handles_hdf5:
             if filename not in opened_voila_files:
-                voila_log().debug(f'memory mapping {filename}')
-                opened_voila_files[filename] = h5py.File(filename, mode, libver='latest', driver='core', backing_store=False)
+                if config.memory_map_hdf5:
+                    voila_log().debug(f'memory mapping {filename}')
+                    opened_voila_files[filename] = h5py.File(filename, mode, libver='latest', driver='core', backing_store=False)
+                else:
+                    voila_log().debug(f'opening handle {filename}')
+                    opened_voila_files[filename] = h5py.File(filename, mode, libver='latest', driver='stdio')
             return opened_voila_files[filename]
 
     return _open_hdf5(filename, mode)
@@ -90,7 +94,12 @@ class MatrixHdf5:
     def close(self):
         from rna_voila.config import ViewConfig
         if self.voila_file:
-            if self._pre_config or not ViewConfig().memory_map_hdf5 or self.mode != 'r':
+
+            if self._pre_config:
+                self.h.close()
+            elif not ViewConfig().memory_map_hdf5 and not ViewConfig().preserve_handles_hdf5:
+                self.h.close()
+            elif self.mode != 'r':
                 self.h.close()
 
         if self.voila_tsv:

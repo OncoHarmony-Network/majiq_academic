@@ -15,7 +15,7 @@ from rna_voila.voila_log import voila_log
 
 _log_keys = ['logger', 'silent']
 _sys_keys = ['nproc', 'debug']
-_global_keys = ['analysis_type', 'memory_map_hdf5', 'groups_to_voilas', 'license']
+_global_keys = ['analysis_type', 'memory_map_hdf5', 'groups_to_voilas', 'license', 'preserve_handles_hdf5']
 
 _ViewConfig = namedtuple('ViewConfig', _global_keys + _sys_keys + _log_keys + ['voila_file', 'voila_files',
                                         'splice_graph_file',
@@ -351,7 +351,7 @@ class ViewConfig:
                 settings[int_key] = config_parser['SETTINGS'].getint(int_key)
             for bool_key in ['force_index', 'silent', 'debug', 'strict_indexing', 'skip_type_indexing',
                              'ignore_inconsistent_group_errors', 'enable_het_comparison_chooser', 'memory_map_hdf5',
-                             'disable_reads']:
+                             'disable_reads', 'preserve_handles_hdf5']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
             # singleton data store properties
@@ -400,7 +400,8 @@ class TsvConfig:
                               'changing_pvalue_threshold', 'changing_between_group_dpsi']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
             for bool_key in ['show_all', 'silent', 'debug', 'strict_indexing', 'show_read_counts',
-                             'ignore_inconsistent_group_errors', 'memory_map_hdf5', 'show_per_sample_psi']:
+                             'ignore_inconsistent_group_errors', 'memory_map_hdf5', 'show_per_sample_psi',
+                             'preserve_handles_hdf5']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
             filters = {}
@@ -448,7 +449,7 @@ class ClassifyConfig:
                              'putative_multi_gene_regions', 'show_all', 'keep_no_lsvs_junctions', 'output_mpe',
                              'ignore_inconsistent_group_errors', 'disable_metadata', 'show_read_counts',
                              'cassettes_constitutive_column', 'include_change_cases', 'junc_gene_dist_column',
-                             'memory_map_hdf5', 'show_per_sample_psi']:
+                             'memory_map_hdf5', 'show_per_sample_psi', 'preserve_handles_hdf5']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
             if settings['decomplexify_reads_threshold'] == 0:
@@ -516,7 +517,7 @@ class FilterConfig:
                               'probability_non_changing_threshold']:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
             for bool_key in ['debug', 'overwrite', 'voila_files_only', 'splice_graph_only', 'changing', 'non_changing',
-                             'memory_map_hdf5']:
+                             'memory_map_hdf5', 'preserve_handles_hdf5']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
             filters = {}
@@ -550,7 +551,7 @@ class SplitterConfig:
                 settings[int_key] = config_parser['SETTINGS'].getint(int_key)
             for float_key in []:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
-            for bool_key in ['debug', 'copy_only', 'overwrite', 'memory_map_hdf5']:
+            for bool_key in ['debug', 'copy_only', 'overwrite', 'memory_map_hdf5', 'preserve_handles_hdf5']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
             filters = {}
@@ -579,7 +580,7 @@ class RecombineConfig:
                 settings[int_key] = config_parser['SETTINGS'].getint(int_key)
             for float_key in []:
                 settings[float_key] = config_parser['SETTINGS'].getfloat(float_key)
-            for bool_key in ['debug', 'memory_map_hdf5']:
+            for bool_key in ['debug', 'memory_map_hdf5', 'preserve_handles_hdf5']:
                 settings[bool_key] = config_parser['SETTINGS'].getboolean(bool_key)
 
             filters = {}

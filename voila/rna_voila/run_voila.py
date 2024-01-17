@@ -75,7 +75,14 @@ sys_parser.add_argument('--memory-map-hdf5', action='store_true',
                         help='by default, hdf5 voila files will be opened and read as needed, however, for greater '
                              'performance it may help to instead preload these files into memory, if your server has '
                              'sufficient RAM. Use this option to memory map the files. If used with view mode, you '
-                             'must also specify an index file to save to with --index-file')
+                             'must also specify an index file to save to with --index-file. '
+                             'This is mutually exclusive with --preserve-handles-hdf5')
+sys_parser.add_argument('--preserve-handles-hdf5', action='store_true',
+                        help='by default, hdf5 voila files will be opened and read as needed, however, for greater '
+                             'performance it may help to instead keep all of the file handles open for the duration'
+                             'of the program run. If used with view mode, you '
+                             'must also specify an index file to save to with --index-file. '
+                             'This is mutually exclusive with --memory-map-hdf5')
 
 
 # tsv parser
