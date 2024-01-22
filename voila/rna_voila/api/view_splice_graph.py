@@ -460,6 +460,8 @@ class ViewSpliceGraph(SpliceGraph):
             for experiment_names in experiment_names_list:
                 combined_name = next((n for n in experiment_names if ' Combined' in n), '')
                 experiment_names = [e for e in experiment_names if e != combined_name]
+                combined_junc_reads = {}
+                combined_ir_reads = {}
 
                 for name in experiment_names:
                     junc_reads[name] = {}
@@ -473,7 +475,6 @@ class ViewSpliceGraph(SpliceGraph):
                     junc_start, junc_end = itemgetter('start', 'end')(junc)
 
                     for exp_name in experiment_names:
-
                         try:
                             reads = all_junc_reads[(exp_name, junc_start, junc_end)]
                         except:
@@ -481,11 +482,14 @@ class ViewSpliceGraph(SpliceGraph):
 
                         try:
                             junc_reads[exp_name][junc_start][junc_end] = reads
-                            if combined_name:
-                                combined_junc_reads[junc_start][junc_end].append(reads)
                         except KeyError:
                             junc_reads[exp_name][junc_start] = {junc_end: reads}
-                            if combined_name:
+
+                        if combined_name:
+                            try:
+                                combined_junc_reads[junc_start][junc_end].append(reads)
+
+                            except KeyError:
                                 combined_junc_reads[junc_start] = {junc_end: [reads]}
 
                     if combined_name:
