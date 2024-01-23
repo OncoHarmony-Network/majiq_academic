@@ -601,28 +601,30 @@ class Violin {
                     .attr('class', 'box-plots');
 
         data.forEach((d, i) => {
+
+            const trans_d = this.translate_lsv_bins(d);
+
+            const q = d3.scaleQuantile()
+                .domain([0, 1])
+                .range(trans_d);
+
+            const y = d3.scaleLinear()
+                .domain([0, 1])
+                .range([this.violin_height, 0]);
+
+            const x = d3.scaleLinear()
+                .domain([0, 1])
+                .range([0, this.violin_width + this.violin_pad]);
+
+            const g = svg.append('g')
+                .attr('class', 'box-plot')
+                .attr('transform', `translate(${x(i)})`)
+                .attr("data-orig-x", x(i))
+                .attr("x", x(i))
+                .attr("data-x", x(i))
+                .attr("data-group-idx", i);
+
             if(d.length > 0) {
-                const trans_d = this.translate_lsv_bins(d);
-
-                const q = d3.scaleQuantile()
-                    .domain([0, 1])
-                    .range(trans_d);
-
-                const y = d3.scaleLinear()
-                    .domain([0, 1])
-                    .range([this.violin_height, 0]);
-
-                const x = d3.scaleLinear()
-                    .domain([0, 1])
-                    .range([0, this.violin_width + this.violin_pad]);
-
-                const g = svg.append('g')
-                    .attr('class', 'box-plot')
-                    .attr('transform', `translate(${x(i)})`)
-                    .attr("data-orig-x", x(i))
-                    .attr("x", x(i))
-                    .attr("data-x", x(i))
-                    .attr("data-group-idx", i);
 
                 g
                     .selectAll('.h-line')
