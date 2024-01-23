@@ -34,7 +34,7 @@ def open_hdf5(filename, mode):
                     opened_voila_files[filename] = h5py.File(filename, mode, libver='latest', driver='core', backing_store=False)
                 else:
                     voila_log().debug(f'opening handle {filename}')
-                    opened_voila_files[filename] = h5py.File(filename, mode, libver='latest', driver='stdio')
+                    opened_voila_files[filename] = h5py.File(filename, mode, libver='latest', swmr=True)
             return opened_voila_files[filename]
 
     return _open_hdf5(filename, mode)
