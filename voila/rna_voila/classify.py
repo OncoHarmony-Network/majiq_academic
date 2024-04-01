@@ -102,7 +102,7 @@ def classify_gene(args):
                 writer.p_alternate_first_exon()
                 writer.p_alternate_last_exon()
 
-                #writer.multi_exon_spanning()
+                writer.multi_exon_spanning()
                 writer.tandem_cassette()
                 writer.orphan_junction()
 
