@@ -233,7 +233,7 @@ def longReadsInputsToLongReadsVoila():
                 for x in fetch:
                     yield dict(zip(('gene_id', 'start', 'end', 'annotated_start', 'annotated_end', 'annotated'), x))
 
-        def reads_new_version(df_gtf, tsv_dict):
+        def reads_new_version(df_gtf, tsv_dict, minus_strand_sorted):
 
             transcripts = {}
             junctions = {}
@@ -280,8 +280,13 @@ def longReadsInputsToLongReadsVoila():
                         else:
                             exons_read_dict[exon_pair] += tsv_dict.get(transcript, 0)
 
-                    df_transcript['next_exon'] = df_transcript.start.shift(-1)
-                    df_transcript = df_transcript[1:-1]
+                    if df_transcript['strand'].iloc[0] == '-' and not minus_strand_sorted:
+                        df_transcript['next_exon'] = df_transcript.start.shift(1)
+                        df_transcript = df_transcript[2:]
+                    else:
+                        df_transcript['next_exon'] = df_transcript.start.shift(-1)
+                        df_transcript = df_transcript[1:-1]
+
 
                     for i, row in df_transcript.iterrows():
                         pair = (row['end'], int(row['next_exon']))
@@ -306,22 +311,45 @@ def longReadsInputsToLongReadsVoila():
         df_tsv['count'] = df_tsv['count'].apply(lambda x: math.ceil(x))
         df_tsv.set_index('transcript_id', inplace=True)
         tsv_dict = df_tsv['count'].to_dict()
-        log.info('~~~Processing Long Read combined read counts~~~')
-        transcript_raw_reads, junction_raw_reads, exons_raw_reads = reads_new_version(df_gtf, tsv_dict)
 
-        # transcript_raw_reads format: { 'gene_id': { 'transcript_id' : reads }}
-        # junction_raw_reads format: { 'gene_id': { (junc_start, junc_end) : reads ) }}
-
-        # df_gtf_all = read_gtf(args.isq_gtf_file).to_pandas()
+        log.info('~~~Detecting Long Read minus strand ordering~~~')
         lrreader = LRGtfReader(gtf_df=df_gtf)
+        all_genes = {}
+        all_gene_ids = list(set(lrreader.gene_ids))
 
         def get_strand(gene_id):
             query = conn.execute('SELECT id, name, strand, chromosome FROM gene WHERE id=?', (gene_id,))
             fetch = query.fetchone()
             return fetch[2]
 
-        all_genes = {}
-        all_gene_ids = list(set(lrreader.gene_ids))
+        minus_strand_sorted = False
+
+        for gene_id in all_gene_ids:
+
+            strand = get_strand(gene_id)
+
+            for transcript in lrreader.gene(gene_id):
+
+                if len(transcript) > 1:
+                    if strand == '-':
+                        if all(transcript[i].start <= transcript[i+1].start for i in range(len(transcript) - 1)):
+                            minus_strand_sorted = True
+                            log.info('> Minus strand transcripts are detected as SORTED')
+                        else:
+                            log.info('> Minus strand transcripts are detected as NOT SORTED')
+                        break
+            else:
+                continue
+            break
+
+
+        log.info('~~~Processing Long Read combined read counts~~~')
+        transcript_raw_reads, junction_raw_reads, exons_raw_reads = reads_new_version(df_gtf, tsv_dict, minus_strand_sorted)
+
+        # transcript_raw_reads format: { 'gene_id': { 'transcript_id' : reads }}
+        # junction_raw_reads format: { 'gene_id': { (junc_start, junc_end) : reads ) }}
+
+        # df_gtf_all = read_gtf(args.isq_gtf_file).to_pandas()
 
         log.info('~~~Processing final version of long reads transcript~~~')
         for gene_id in tqdm(all_gene_ids):
@@ -348,6 +376,10 @@ def longReadsInputsToLongReadsVoila():
                 transcript_junctions_reads = []
                 transcript_intron_retention = []
                 transcript_intron_retention_reads = []
+
+                if strand == '-' and not minus_strand_sorted:
+                    # transcript = [(x[1], x[0]) for x in (reversed(transcript))]
+                    transcript = [x for x in (reversed(transcript))]
 
                 # detect junctions
                 for i, lr_exon in enumerate(transcript):
