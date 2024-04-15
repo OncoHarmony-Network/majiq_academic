@@ -164,53 +164,47 @@ class LRGtfReader:
             if row.feature == 'transcript':
                 yield row['transcript_id']
 
+
     def gene(self, gene_id, extent=None, ignore_starts_ends=False):
 
         df_gene = self.df[self.df['gene_id'] == gene_id]
 
-        found_transcripts = set()
-        transcript_exons = []
-
-        def append_next(_transcript_exons):
-            if _transcript_exons:
-                # _transcript_exons = sorted(_transcript_exons, key=lambda e: e.start)
-                if ignore_starts_ends:
-                    _transcript_exons[0] = exon(-_transcript_exons[0].start, _transcript_exons[0].end)
-                    _transcript_exons[-1] = exon(_transcript_exons[-1].start, -_transcript_exons[-1].end)
-                _transcript_exons = tuple(_transcript_exons)
-                if not _transcript_exons in found_transcripts:
-                    found_transcripts.add(_transcript_exons)
-                    return tuple(_transcript_exons)
+        transcript_exons = {}
 
         for index, row in df_gene.iterrows():
 
             if row.feature == 'transcript':
-                ret = append_next(transcript_exons)
-                if ret:
-                    yield ret
+                transcript_exons[row.transcript_id] = []
 
-                transcript_exons = []
-                continue
+        for index, row in df_gene.iterrows():
 
-            elif row.feature == 'exon':
+            if row.feature == 'exon':
                 _exon = exon(int(row.start), int(row.end))
 
                 if extent:
                     if (_exon.end >= extent[0] and _exon.end <= extent[1]) or \
                             (_exon.start >= extent[0] and _exon.start <= extent[1]):
-                        transcript_exons.append(_exon)
+                        transcript_exons[row.transcript_id].append(_exon)
                 else:
-                    transcript_exons.append(_exon)
+                    transcript_exons[row.transcript_id].append(_exon)
 
-        ret = append_next(transcript_exons)  # catch the last append
-        if ret:
-            yield ret
+        for transcript_id, exons in transcript_exons.items():
+            if exons:
+                exons = sorted(exons, key=lambda e: e.start)
+
+                if ignore_starts_ends:
+                    exons[0] = exon(-exons[0].start, exons[0].end)
+                    exons[-1] = exon(exons[-1].start, -exons[-1].end)
+
+                yield exons
 
 def longReadsInputsToLongReadsVoila():
     config = LongReadsConfig()
     log = voila_log()
 
     log.info("Running LR")
+
+    num_lr_transcripts = 0
 
     if not config.only_update_psi:
 
@@ -233,7 +227,7 @@ def longReadsInputsToLongReadsVoila():
                 for x in fetch:
                     yield dict(zip(('gene_id', 'start', 'end', 'annotated_start', 'annotated_end', 'annotated'), x))
 
-        def reads_new_version(df_gtf, tsv_dict, minus_strand_sorted):
+        def reads_new_version(df_gtf, tsv_dict):
 
             transcripts = {}
             junctions = {}
@@ -258,6 +252,7 @@ def longReadsInputsToLongReadsVoila():
 
                 for transcript in transcripts_list:
                     df_transcript = df_gene[df_gene['transcript_id'] == transcript]
+                    df_transcript.sort_values(by=['start'], inplace=True)
                     exon_pairs_list = [(row['start'], row['end']) for i, row in df_transcript[1:].iterrows()]
 
                     for junc_pair in junc_pairs_from_sql:
@@ -280,12 +275,12 @@ def longReadsInputsToLongReadsVoila():
                         else:
                             exons_read_dict[exon_pair] += tsv_dict.get(transcript, 0)
 
-                    if df_transcript['strand'].iloc[0] == '-' and not minus_strand_sorted:
-                        df_transcript['next_exon'] = df_transcript.start.shift(1)
-                        df_transcript = df_transcript[2:]
-                    else:
-                        df_transcript['next_exon'] = df_transcript.start.shift(-1)
-                        df_transcript = df_transcript[1:-1]
+                    # if df_transcript['strand'].iloc[0] == '-':
+                    #     df_transcript['next_exon'] = df_transcript.start.shift(1)
+                    #     df_transcript = df_transcript[2:]
+                    # else:
+                    df_transcript['next_exon'] = df_transcript.start.shift(-1)
+                    df_transcript = df_transcript[1:-1]
 
 
                     for i, row in df_transcript.iterrows():
@@ -313,45 +308,25 @@ def longReadsInputsToLongReadsVoila():
         tsv_dict = df_tsv['count'].to_dict()
 
         log.info('~~~Detecting Long Read minus strand ordering~~~')
-        lrreader = LRGtfReader(gtf_df=df_gtf)
-        all_genes = {}
-        all_gene_ids = list(set(lrreader.gene_ids))
+
 
         def get_strand(gene_id):
             query = conn.execute('SELECT id, name, strand, chromosome FROM gene WHERE id=?', (gene_id,))
             fetch = query.fetchone()
             return fetch[2]
 
-        minus_strand_sorted = False
-
-        for gene_id in all_gene_ids:
-
-            strand = get_strand(gene_id)
-
-            for transcript in lrreader.gene(gene_id):
-
-                if len(transcript) > 1:
-                    if strand == '-':
-                        if all(transcript[i].start <= transcript[i+1].start for i in range(len(transcript) - 1)):
-                            minus_strand_sorted = True
-                            log.info('> Minus strand transcripts are detected as SORTED')
-                        else:
-                            log.info('> Minus strand transcripts are detected as NOT SORTED')
-                        break
-            else:
-                continue
-            break
-
-
         log.info('~~~Processing Long Read combined read counts~~~')
-        transcript_raw_reads, junction_raw_reads, exons_raw_reads = reads_new_version(df_gtf, tsv_dict, minus_strand_sorted)
+        transcript_raw_reads, junction_raw_reads, exons_raw_reads = reads_new_version(df_gtf, tsv_dict)
 
         # transcript_raw_reads format: { 'gene_id': { 'transcript_id' : reads }}
         # junction_raw_reads format: { 'gene_id': { (junc_start, junc_end) : reads ) }}
-
+        lrreader = LRGtfReader(gtf_df=df_gtf)
+        all_genes = {}
+        all_gene_ids = list(set(lrreader.gene_ids))
         # df_gtf_all = read_gtf(args.isq_gtf_file).to_pandas()
 
         log.info('~~~Processing final version of long reads transcript~~~')
+
         for gene_id in tqdm(all_gene_ids):
             if config.gene_id and gene_id != config.gene_id:
                 continue
@@ -377,9 +352,10 @@ def longReadsInputsToLongReadsVoila():
                 transcript_intron_retention = []
                 transcript_intron_retention_reads = []
 
-                if strand == '-' and not minus_strand_sorted:
-                    # transcript = [(x[1], x[0]) for x in (reversed(transcript))]
-                    transcript = [x for x in (reversed(transcript))]
+
+                # if strand == '-':
+                #     # transcript = [(x[1], x[0]) for x in (reversed(transcript))]
+                #     transcript = [x for x in (reversed(transcript))]
 
                 # detect junctions
                 for i, lr_exon in enumerate(transcript):
@@ -440,6 +416,7 @@ def longReadsInputsToLongReadsVoila():
                         out_t[key].reverse()
 
                 all_genes[gene_id]['transcripts'].append(out_t)
+                num_lr_transcripts += 1
 
         conn.close()
 
@@ -476,5 +453,15 @@ def longReadsInputsToLongReadsVoila():
     with open(config.output_file, 'wb') as f:
         pickle.dump(all_genes, f)
 
+    log.info(f'~~~Processing Complete, there were {len(all_genes.keys())} gene(s) found containing {num_lr_transcripts} total transcripts ~~~')
 
 
+if __name__ == "__main__":
+    l = LRGtfReader('/tmp2/longread/sample1_bambu_ont/extended_annotations.gtf')
+    from pprint import pprint
+    for transcript in l.gene('ENSG00000094916.16'):
+        pprint(transcript)
+
+    print('---')
+    for transcript in l.gene_new('ENSG00000094916.16'):
+        pprint(transcript)
