@@ -2,7 +2,7 @@ from cryptography.fernet import Fernet
 from datetime import datetime
 import sys, os
 
-LICENSE_CHECKING_TYPE = "None"
+LICENSE_CHECKING_TYPE = "academic"
 key = b'7ulXO1YfJWoPscAsklVwBtaHJKzfGQBlPS7Rj4DCoD8='
 
 
